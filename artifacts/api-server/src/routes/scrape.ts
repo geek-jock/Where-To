@@ -22,30 +22,28 @@ function decodeEntities(text: string): string {
     .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
 }
 
-function parseDescription(raw: string | null): string | null {
+function cleanMetaDescription(raw: string | null): string | null {
   if (!raw) return null;
 
   let text = decodeEntities(raw);
 
-  // Instagram: "[Page] on Instagram: "caption" N likes, N comments - user on date: "caption""
+  // Instagram caption
   const igMatch = text.match(/^.+?\bon Instagram:\s*"([\s\S]+?)"\s*(?:\d[\d,]*\s+like|\.|$)/i);
   if (igMatch) return igMatch[1].trim();
 
-  // Facebook: "[Page] on Facebook: "caption""
+  // Facebook caption
   const fbMatch = text.match(/^.+?\bon Facebook:\s*"([\s\S]+?)"\s*(?:\d[\d,]*\s+like|\.|$)/i);
   if (fbMatch) return fbMatch[1].trim();
 
-  // TikTok: "username · N.NM views · caption #hashtags"
+  // TikTok: "username · N.NM views · caption"
   const ttMatch = text.match(/^.+?·\s*[\d.,]+\s*[KMBkmb]?\s*views?\s*·\s*([\s\S]+)/i);
   if (ttMatch) return ttMatch[1].trim();
 
-  // YouTube: strip "N views" / "N watching" style suffix lines
+  // Strip view/engagement counts
   text = text.replace(/\s*\d[\d,]*\s+(?:views?|watching|subscribers?)[^\n]*/gi, "").trim();
-
-  // Strip trailing social engagement metadata
   text = text.replace(/\s*\d[\d,]*\s+likes?,\s*\d+\s+comments?[\s\S]*$/i, "").trim();
 
-  // Deduplicate repeated blocks
+  // Deduplicate repeated content
   if (text.length > 120) {
     const half = Math.ceil(text.length * 0.48);
     const firstChunk = text.slice(0, half).trim();
@@ -54,40 +52,79 @@ function parseDescription(raw: string | null): string | null {
     }
   }
 
-  // Remove wrapping quotes
   text = text.replace(/^["'"]+|["'"]+\.?$/g, "").trim();
-
   return text || null;
 }
 
-async function generateTitle(description: string, rawTitle: string | null, url: string): Promise<string | null> {
-  try {
-    const context = [
-      description ? `Description: ${description.slice(0, 400)}` : null,
-      rawTitle ? `Raw page title: ${rawTitle}` : null,
-      `Source URL: ${url}`,
-    ].filter(Boolean).join("\n");
+function extractBodyText(html: string): string | null {
+  // Remove scripts, styles, nav, header, footer
+  let stripped = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+    .replace(/<header[\s\S]*?<\/header>/gi, "")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, "");
 
+  // Extract text from <p> tags first (most meaningful content)
+  const pMatches = [...stripped.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
+  if (pMatches.length > 0) {
+    const paragraphs = pMatches
+      .map(m => m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim())
+      .filter(p => p.length > 30);
+    if (paragraphs.length > 0) {
+      return paragraphs.slice(0, 3).join(" ").slice(0, 500);
+    }
+  }
+
+  // Fall back to stripping all tags
+  const plain = stripped
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return plain.length > 50 ? plain.slice(0, 500) : null;
+}
+
+async function generateTitleAndDescription(
+  rawDescription: string | null,
+  rawTitle: string | null,
+  bodyText: string | null,
+  url: string,
+): Promise<{ title: string | null; description: string | null }> {
+  const hasDescription = !!(rawDescription || bodyText);
+  const contextParts = [
+    rawTitle ? `Page title: ${rawTitle}` : null,
+    rawDescription ? `Meta description: ${rawDescription.slice(0, 400)}` : null,
+    !rawDescription && bodyText ? `Page content: ${bodyText.slice(0, 400)}` : null,
+    `URL: ${url}`,
+  ].filter(Boolean);
+
+  if (!contextParts.length) return { title: null, description: null };
+
+  try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You create concise, editorial titles for saved travel places. 
-Given scraped content from a URL, return ONLY a short title (3–8 words) that names the place or experience clearly and evocatively. 
-No quotes, no trailing punctuation. No generic titles like "Instagram post" or "Video". 
-If it's a specific place, name it. If it's a vibe/experience, capture it briefly.`,
+          content: `You help users organize travel saves. Given scraped web content, return a JSON object with:
+1. "title": 3–8 word editorial title naming the specific place or experience. Never generic ("Instagram post", "Video"). Name the actual place if identifiable.
+2. "description": 1–2 sentence evocative description of what makes this place or experience worth saving. ${hasDescription ? "Distill the key insight from the content." : "Based on the URL and title, write a brief placeholder description."} Keep it under 120 characters.
+Reply ONLY with valid JSON: {"title":"...","description":"..."}`,
         },
-        { role: "user", content: context },
+        { role: "user", content: contextParts.join("\n") },
       ],
-      max_tokens: 40,
+      max_tokens: 120,
       temperature: 0.4,
     });
 
-    const title = completion.choices[0]?.message?.content?.trim() ?? null;
-    return title || null;
+    const raw = completion.choices[0]?.message?.content?.trim() ?? "{}";
+    const parsed = JSON.parse(raw.replace(/^```json\s*|```\s*$/g, "").trim());
+    return {
+      title: typeof parsed.title === "string" && parsed.title ? parsed.title : null,
+      description: typeof parsed.description === "string" && parsed.description ? parsed.description : null,
+    };
   } catch {
-    return null;
+    return { title: null, description: null };
   }
 }
 
@@ -112,26 +149,27 @@ async function scrapeUrl(url: string) {
 
     const html = await response.text();
 
-    const rawTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i)?.[1]
+    const rawTitleRaw = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i)?.[1]
       || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]
       || null;
+    const rawTitle = rawTitleRaw ? decodeEntities(rawTitleRaw).trim() : null;
 
-    const rawDescription = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i)?.[1]
+    const rawDescriptionRaw = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i)?.[1]
       || html.match(/<meta\s+name="description"\s+content="([^"]+)"/i)?.[1]
       || null;
+    const rawDescription = cleanMetaDescription(rawDescriptionRaw);
 
     const image = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i)?.[1] || null;
     const siteName = html.match(/<meta\s+property="og:site_name"\s+content="([^"]+)"/i)?.[1] || null;
 
-    // Description = the parsed scraped content (cleaned)
-    const description = parseDescription(rawDescription);
+    // Extract body text as fallback description source
+    const bodyText = rawDescription ? null : extractBodyText(html);
 
-    // Title = AI-generated from the description (falls back to raw title if AI fails)
-    const aiTitle = description || rawTitle
-      ? await generateTitle(description ?? "", rawTitle ? decodeEntities(rawTitle).trim() : null, url)
-      : null;
+    // Generate both title and description via AI
+    const ai = await generateTitleAndDescription(rawDescription, rawTitle, bodyText, url);
 
-    const title = aiTitle ?? (rawTitle ? decodeEntities(rawTitle).trim() : null);
+    const title = ai.title ?? rawTitle;
+    const description = ai.description ?? rawDescription ?? null;
 
     return { url, title, description, image, siteName };
   } catch {

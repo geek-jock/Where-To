@@ -13,7 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Save } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, ImagePlus, RefreshCw, Tag, Building2, UtensilsCrossed, Star, TreePine, Landmark, ShoppingBag } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, Tag, Building2, UtensilsCrossed, Star, TreePine, Landmark, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,27 +101,22 @@ function SaveDetailDialog({
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [placeName, setPlaceName] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [imageError, setImageError] = useState(false);
 
   const updateSave = useUpdateSave();
-  const scrapeUrl = useScrapeUrl();
   const { toast } = useToast();
 
   const startEdit = () => {
     if (!save) return;
     setTitle(save.scrapedTitle ?? "");
     setDescription(parseDescription(save.scrapedDescription) ?? "");
-    setImageUrl(save.scrapedImage ?? "");
     setPlaceName(save.placeName ?? "");
     setTagsInput((save.tags ?? []).join(", "));
-    setImageError(false);
     setEditing(true);
   };
 
-  const cancelEdit = () => { setEditing(false); setImageError(false); };
+  const cancelEdit = () => { setEditing(false); };
 
   const handleSave = async () => {
     if (!save) return;
@@ -132,7 +127,6 @@ function SaveDetailDialog({
         data: {
           scrapedTitle: title.trim() || null,
           scrapedDescription: description.trim() || null,
-          scrapedImage: imageUrl.trim() || null,
           placeName: placeName.trim() || null,
           tags: newTags.length > 0 ? newTags : null,
         },
@@ -142,17 +136,6 @@ function SaveDetailDialog({
       toast({ title: "Changes saved" });
     } catch {
       toast({ title: "Failed to save changes", variant: "destructive" });
-    }
-  };
-
-  const handleFetchImage = async () => {
-    if (!save?.url) return;
-    try {
-      const result = await scrapeUrl.mutateAsync({ data: { url: save.url } });
-      if (result.image) { setImageUrl(result.image); setImageError(false); toast({ title: "Image found" }); }
-      else toast({ title: "No image found at this URL", variant: "destructive" });
-    } catch {
-      toast({ title: "Couldn't fetch image", variant: "destructive" });
     }
   };
 
@@ -169,34 +152,6 @@ function SaveDetailDialog({
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { onClose(); setEditing(false); } }}>
       <DialogContent className="max-w-lg p-0 overflow-hidden gap-0 max-h-[90dvh] flex flex-col">
-
-        {/* ── Image ── */}
-        {editing ? (
-          <div className="flex-shrink-0 border-b border-border bg-muted/20">
-            {imageUrl && !imageError ? (
-              <div className="relative h-40">
-                <img src={imageUrl} alt="" className="w-full h-full object-cover" onError={() => setImageError(true)} />
-                <button className="absolute top-2 right-2 bg-background/80 rounded-full p-1 hover:bg-background" onClick={() => { setImageUrl(""); setImageError(false); }}>
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : null}
-            <div className="flex items-center gap-2 px-4 py-2.5">
-              <ImagePlus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <Input placeholder="Image URL" value={imageUrl} onChange={e => { setImageUrl(e.target.value); setImageError(false); }} className="flex-1 h-8 text-sm" />
-              {save.url && (
-                <Button variant="outline" size="sm" className="h-8 text-xs gap-1 flex-shrink-0" onClick={handleFetchImage} disabled={scrapeUrl.isPending}>
-                  {scrapeUrl.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                  Fetch
-                </Button>
-              )}
-            </div>
-          </div>
-        ) : save.scrapedImage ? (
-          <div className="h-52 w-full overflow-hidden flex-shrink-0">
-            <img src={save.scrapedImage} alt="" className="w-full h-full object-cover" />
-          </div>
-        ) : null}
 
         {/* ── Scrollable body ── */}
         <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-border">
@@ -514,9 +469,6 @@ export default function Saves() {
             ) : (
               <div className="space-y-4 animate-in fade-in">
                 <div className="border border-border p-4 flex gap-4 bg-muted/30">
-                  {scrapedData.image && (
-                    <img src={scrapedData.image} alt="" className="w-24 h-24 object-cover" />
-                  )}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-serif font-medium text-lg truncate">{scrapedData.title || scrapedData.url}</h3>
                     {scrapedData.description && (
@@ -619,11 +571,6 @@ export default function Saves() {
               {activePinSave ? (
                 /* Active pin details */
                 <div className="flex flex-col h-full overflow-y-auto">
-                  {activePinSave.scrapedImage && (
-                    <div className="h-40 flex-shrink-0 overflow-hidden">
-                      <img src={activePinSave.scrapedImage} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
                   <div className="p-5 flex flex-col gap-4 flex-1">
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -751,16 +698,7 @@ export default function Saves() {
                     onClick={() => toggleSelect(save.id)}
                     data-testid={`card-save-${save.id}`}
                   >
-                    {save.scrapedImage ? (
-                      <div className="relative h-32 w-full overflow-hidden border-b border-border">
-                        <img src={save.scrapedImage} alt="" className="w-full h-full object-cover" />
-                        {save.category && (
-                          <div className="absolute bottom-2 left-2">
-                            <CategoryBadge category={save.category} />
-                          </div>
-                        )}
-                      </div>
-                    ) : save.category ? (
+                    {save.category ? (
                       <div className="px-5 pt-4 pb-0">
                         <CategoryBadge category={save.category} />
                       </div>
