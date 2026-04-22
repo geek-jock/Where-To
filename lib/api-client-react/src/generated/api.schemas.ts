@@ -17,6 +17,10 @@ export interface Save {
   scrapedTitle?: string | null;
   scrapedDescription?: string | null;
   scrapedImage?: string | null;
+  placeName?: string | null;
+  countryCode?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   createdAt: string;
 }
 

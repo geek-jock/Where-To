@@ -264,6 +264,90 @@ export const useCreateSave = <
 };
 
 /**
+ * @summary Geocode a save using AI + Nominatim
+ */
+export const getGeocodeSaveUrl = (id: number) => {
+  return `/api/saves/${id}/geocode`;
+};
+
+export const geocodeSave = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Save> => {
+  return customFetch<Save>(getGeocodeSaveUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getGeocodeSaveMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof geocodeSave>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof geocodeSave>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["geocodeSave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof geocodeSave>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return geocodeSave(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GeocodeSaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof geocodeSave>>
+>;
+
+export type GeocodeSaveMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Geocode a save using AI + Nominatim
+ */
+export const useGeocodeSave = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof geocodeSave>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof geocodeSave>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getGeocodeSaveMutationOptions(options));
+};
+
+/**
  * @summary Delete a save
  */
 export const getDeleteSaveUrl = (id: number) => {

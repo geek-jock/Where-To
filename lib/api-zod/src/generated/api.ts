@@ -26,6 +26,10 @@ export const ListSavesResponseItem = zod.object({
   scrapedTitle: zod.string().nullish(),
   scrapedDescription: zod.string().nullish(),
   scrapedImage: zod.string().nullish(),
+  placeName: zod.string().nullish(),
+  countryCode: zod.string().nullish(),
+  lat: zod.number().nullish(),
+  lng: zod.number().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListSavesResponse = zod.array(ListSavesResponseItem);
@@ -39,6 +43,28 @@ export const CreateSaveBody = zod.object({
   scrapedTitle: zod.string().nullish(),
   scrapedDescription: zod.string().nullish(),
   scrapedImage: zod.string().nullish(),
+});
+
+/**
+ * @summary Geocode a save using AI + Nominatim
+ */
+export const GeocodeSaveParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GeocodeSaveResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  content: zod.string(),
+  url: zod.string().nullish(),
+  scrapedTitle: zod.string().nullish(),
+  scrapedDescription: zod.string().nullish(),
+  scrapedImage: zod.string().nullish(),
+  placeName: zod.string().nullish(),
+  countryCode: zod.string().nullish(),
+  lat: zod.number().nullish(),
+  lng: zod.number().nullish(),
+  createdAt: zod.coerce.date(),
 });
 
 /**

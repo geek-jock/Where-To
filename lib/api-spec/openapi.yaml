@@ -68,6 +68,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/Save"
 
+  /saves/{id}/geocode:
+    post:
+      operationId: geocodeSave
+      tags: [saves]
+      summary: Geocode a save using AI + Nominatim
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Geocoded save
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Save"
+
   /saves/{id}:
     delete:
       operationId: deleteSave
@@ -220,6 +241,18 @@ components:
           nullable: true
         scrapedImage:
           type: string
+          nullable: true
+        placeName:
+          type: string
+          nullable: true
+        countryCode:
+          type: string
+          nullable: true
+        lat:
+          type: number
+          nullable: true
+        lng:
+          type: number
           nullable: true
         createdAt:
           type: string

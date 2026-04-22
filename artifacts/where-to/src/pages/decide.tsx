@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { 
   useListSaves, 
@@ -20,10 +20,20 @@ export default function Decide() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const search = useSearch();
 
   const [question, setQuestion] = useState("");
   const [selectedSaveIds, setSelectedSaveIds] = useState<number[]>([]);
   const [result, setResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const raw = params.get("saveIds");
+    if (raw) {
+      const ids = raw.split(",").map(Number).filter(n => !isNaN(n) && n > 0);
+      if (ids.length > 0) setSelectedSaveIds(ids);
+    }
+  }, [search]);
 
   const toggleSave = (id: number) => {
     setSelectedSaveIds(prev => 
