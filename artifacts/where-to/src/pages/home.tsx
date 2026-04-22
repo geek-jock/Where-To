@@ -1,8 +1,21 @@
-import { SignInButton } from "@clerk/react";
+import { useSignIn } from "@clerk/react/legacy";
 import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export default function Home() {
+  const { signIn, isLoaded } = useSignIn();
+
+  async function handleGoogleSignIn() {
+    if (!isLoaded || !signIn) return;
+    await signIn.authenticateWithRedirect({
+      strategy: "oauth_google",
+      redirectUrl: `${window.location.origin}${basePath}/sso-callback`,
+      redirectUrlComplete: `${window.location.origin}${basePath}/saves`,
+    });
+  }
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4">
       <div className="max-w-xl text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -18,11 +31,15 @@ export default function Home() {
           A quiet place to gather your travel ideas and let an editorial intelligence make the final call for you.
         </p>
         <div className="pt-8">
-          <SignInButton mode="modal">
-            <Button size="lg" className="h-12 px-8 text-base shadow-sm" data-testid="button-start-deciding">
-              Start deciding
-            </Button>
-          </SignInButton>
+          <Button
+            size="lg"
+            className="h-12 px-8 text-base shadow-sm"
+            data-testid="button-start-deciding"
+            onClick={handleGoogleSignIn}
+            disabled={!isLoaded}
+          >
+            Continue with Google
+          </Button>
         </div>
       </div>
     </div>
