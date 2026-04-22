@@ -83,7 +83,7 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
     if (!placeName || placeName === "NONE") {
       const [updated] = await db
         .update(savesTable)
-        .set({ placeName: null, lat: null, lng: null })
+        .set({ placeName: null, countryCode: null, lat: null, lng: null })
         .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
         .returning();
       return res.json(updated);
