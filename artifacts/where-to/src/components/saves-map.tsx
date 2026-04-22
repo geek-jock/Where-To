@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -16,17 +16,20 @@ function toFlag(code: string): string {
     .join("");
 }
 
-function numberedMarkerIcon(num: number, selected: boolean): L.DivIcon {
-  const bg = selected ? "#6b7c46" : "#3d3d34";
-  const border = selected ? "#b8a97a" : "white";
-  const shadow = selected
+function numberedMarkerIcon(num: number, selected: boolean, active: boolean): L.DivIcon {
+  const bg = selected ? "#6b7c46" : active ? "#b8a97a" : "#3d3d34";
+  const border = active ? "white" : selected ? "#b8a97a" : "white";
+  const size = active ? 36 : 30;
+  const shadow = active
+    ? "0 0 0 3px #3d3d34, 0 4px 14px rgba(0,0,0,0.4)"
+    : selected
     ? "0 0 0 3px #b8a97a, 0 3px 10px rgba(0,0,0,0.35)"
     : "0 2px 6px rgba(0,0,0,0.3)";
   return L.divIcon({
     html: `<div style="
-      width: 30px; height: 30px; border-radius: 50%;
+      width: ${size}px; height: ${size}px; border-radius: 50%;
       background: ${bg};
-      color: white; font-size: 11px; font-weight: 700;
+      color: white; font-size: ${active ? 13 : 11}px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       box-shadow: ${shadow};
       border: 2px solid ${border};
@@ -35,9 +38,8 @@ function numberedMarkerIcon(num: number, selected: boolean): L.DivIcon {
       transition: transform 0.15s;
     ">${num}</div>`,
     className: "",
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -15],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
 }
 
@@ -45,9 +47,11 @@ interface SavesMapProps {
   saves: Save[];
   selectedIds: number[];
   onToggle: (id: number) => void;
+  activeSave: Save | null;
+  onPinClick: (save: Save) => void;
 }
 
-export function SavesMap({ saves, selectedIds, onToggle }: SavesMapProps) {
+export function SavesMap({ saves, selectedIds, onToggle, activeSave, onPinClick }: SavesMapProps) {
   const markerSaveMap = useRef(new Map<L.Marker, Save>());
 
   const geocodedSaves = saves.filter(s => s.lat != null && s.lng != null);
@@ -102,7 +106,7 @@ export function SavesMap({ saves, selectedIds, onToggle }: SavesMapProps) {
       <MapContainer
         center={[centerLat, centerLng]}
         zoom={3}
-        style={{ height: "min(420px, 55vw + 60px)", minHeight: "260px", width: "100%" }}
+        style={{ height: "min(480px, 65vw)", minHeight: "300px", width: "100%" }}
         scrollWheelZoom
       >
         <TileLayer
@@ -122,7 +126,9 @@ export function SavesMap({ saves, selectedIds, onToggle }: SavesMapProps) {
               save={save}
               index={idx + 1}
               selected={selectedIds.includes(save.id)}
+              active={activeSave?.id === save.id}
               onToggle={onToggle}
+              onPinClick={onPinClick}
               markerSaveMap={markerSaveMap.current}
             />
           ))}
@@ -136,97 +142,30 @@ interface MarkerPinProps {
   save: Save;
   index: number;
   selected: boolean;
+  active: boolean;
   onToggle: (id: number) => void;
+  onPinClick: (save: Save) => void;
   markerSaveMap: Map<L.Marker, Save>;
 }
 
-function MarkerPin({ save, index, selected, onToggle, markerSaveMap }: MarkerPinProps) {
+function MarkerPin({ save, index, selected, active, onToggle, onPinClick, markerSaveMap }: MarkerPinProps) {
   const markerRef = useRef<L.Marker>(null);
 
   useEffect(() => {
     const marker = markerRef.current;
     if (!marker) return;
     markerSaveMap.set(marker, save);
-    return () => {
-      markerSaveMap.delete(marker);
-    };
+    return () => { markerSaveMap.delete(marker); };
   }, []);
-
-  const title = save.scrapedTitle || save.content.slice(0, 60) + (save.content.length > 60 ? "…" : "");
 
   return (
     <Marker
       ref={markerRef}
       position={[save.lat!, save.lng!]}
-      icon={numberedMarkerIcon(index, selected)}
-    >
-      <Popup
-        closeButton={false}
-        className="saves-map-popup"
-        minWidth={220}
-        maxWidth={280}
-      >
-        <div style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          background: "#f5f5f0",
-          borderRadius: "8px",
-          overflow: "hidden",
-          margin: "-13px -19px",
-        }}>
-          {save.scrapedImage && (
-            <img
-              src={save.scrapedImage}
-              alt=""
-              style={{
-                width: "100%",
-                height: "110px",
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-          )}
-          <div style={{ padding: "12px 14px 10px" }}>
-            <p style={{
-              margin: "0 0 3px",
-              fontFamily: "Georgia, 'Times New Roman', serif",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#3d3d34",
-              lineHeight: 1.3,
-            }}>
-              {title}
-            </p>
-            {save.placeName && (
-              <p style={{
-                margin: "0 0 10px",
-                fontSize: "11px",
-                color: "#7a7a6a",
-                lineHeight: 1.4,
-              }}>
-                {save.placeName}
-              </p>
-            )}
-            <button
-              onClick={() => onToggle(save.id)}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "6px 10px",
-                borderRadius: "5px",
-                border: selected ? "1.5px solid #6b7c46" : "1.5px solid #3d3d34",
-                background: selected ? "#6b7c46" : "#3d3d34",
-                color: "#f5f5f0",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: "pointer",
-                letterSpacing: "0.02em",
-              }}
-            >
-              {selected ? "Deselect" : "Select"}
-            </button>
-          </div>
-        </div>
-      </Popup>
-    </Marker>
+      icon={numberedMarkerIcon(index, selected, active)}
+      eventHandlers={{
+        click: () => onPinClick(save),
+      }}
+    />
   );
 }

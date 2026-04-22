@@ -380,6 +380,7 @@ export default function Saves() {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [selectedSaveIds, setSelectedSaveIds] = useState<number[]>([]);
   const [detailSave, setDetailSave] = useState<Save | null>(null);
+  const [activePinSave, setActivePinSave] = useState<Save | null>(null);
 
   const toggleSelect = (id: number) => {
     setSelectedSaveIds(prev =>
@@ -562,7 +563,7 @@ export default function Saves() {
           <h2 className="text-xl font-serif font-semibold">Your library</h2>
           <div className="flex items-center border border-border overflow-hidden">
             <button
-              onClick={() => setViewMode("list")}
+              onClick={() => { setViewMode("list"); setActivePinSave(null); }}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm min-h-[40px] transition-colors ${
                 viewMode === "list"
                   ? "bg-foreground text-background"
@@ -598,17 +599,102 @@ export default function Saves() {
             <p>Your library is empty. Save some links or ideas to get started.</p>
           </div>
         ) : viewMode === "map" ? (
-          <div className="relative">
+          <div className="space-y-0">
             <SavesMap
               saves={saves}
               selectedIds={selectedSaveIds}
               onToggle={toggleSelect}
+              activeSave={activePinSave}
+              onPinClick={(save) => setActivePinSave(prev => prev?.id === save.id ? null : save)}
             />
+
+            {/* Pin info panel — appears below map on pin tap */}
+            {activePinSave && (
+              <div className="border border-t-0 border-border bg-card animate-in slide-in-from-top-2 duration-200">
+                <div className="flex gap-0">
+                  {/* Image */}
+                  {activePinSave.scrapedImage && (
+                    <div className="w-28 sm:w-36 flex-shrink-0 overflow-hidden">
+                      <img
+                        src={activePinSave.scrapedImage}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        style={{ minHeight: "120px", maxHeight: "160px" }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 p-4 flex flex-col justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="flex-1 min-w-0">
+                          {activePinSave.category && (
+                            <div className="mb-1.5">
+                              <CategoryBadge category={activePinSave.category} />
+                            </div>
+                          )}
+                          <h3 className="font-serif font-semibold text-base leading-snug line-clamp-2">
+                            {activePinSave.scrapedTitle || activePinSave.placeName || activePinSave.content.slice(0, 60)}
+                          </h3>
+                        </div>
+                        <button
+                          onClick={() => setActivePinSave(null)}
+                          className="flex-shrink-0 p-1 text-muted-foreground hover:text-foreground"
+                          aria-label="Close"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {activePinSave.placeName && (
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                          <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+                          <span>{activePinSave.placeName}</span>
+                        </p>
+                      )}
+
+                      {activePinSave.tags && activePinSave.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {activePinSave.tags.slice(0, 3).map(tag => (
+                            <span key={tag} className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium tracking-wide border border-border/60 text-muted-foreground bg-muted/20 rounded-sm">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleSelect(activePinSave.id)}
+                        className={`flex-1 py-2 px-3 text-xs font-semibold tracking-wide border transition-colors ${
+                          selectedSaveIds.includes(activePinSave.id)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-transparent text-foreground border-border hover:bg-muted"
+                        }`}
+                      >
+                        {selectedSaveIds.includes(activePinSave.id) ? "✓ Selected" : "Select for decision"}
+                      </button>
+                      <button
+                        onClick={() => { setDetailSave(activePinSave); setActivePinSave(null); }}
+                        className="py-2 px-3 text-xs font-medium text-muted-foreground border border-border hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Decide bar */}
             {selectedSaveIds.length > 0 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] animate-in slide-in-from-bottom-4 duration-300">
+              <div className="border border-t-0 border-border p-3 bg-foreground">
                 <button
                   onClick={handleGoDecide}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-foreground text-background text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
+                  className="flex items-center justify-center gap-2 w-full text-background text-sm font-medium hover:opacity-90 transition-opacity"
                 >
                   <Sparkles className="h-4 w-4" />
                   Decide with {selectedSaveIds.length} {selectedSaveIds.length === 1 ? "place" : "places"}
