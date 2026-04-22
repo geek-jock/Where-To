@@ -206,10 +206,11 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
         {
           role: "system",
           content:
-            "Extract the single most specific real-world place from the text. " +
-            "Reply with ONLY the place in 'Neighbourhood/Landmark, City, Country' format — always include city and country if known. " +
-            "If the place is a small town or attraction, use 'Name, State/Region, Country'. " +
-            "If no place is identifiable, reply with exactly: NONE",
+            "Extract the real-world location from the text. Be aggressive — even for niche lodges, resorts, or attractions, extract the nearest identifiable geographic place.\n\n" +
+            "Format: 'Landmark/Neighbourhood, City/Town, Country' — always include country.\n" +
+            "If the specific venue isn't geocodable (private lodge, small resort), use its nearest town or region: 'Town, State/Region, Country'.\n" +
+            "If you know the country but not the city, use: 'Region, Country'.\n" +
+            "Only reply 'NONE' if there is absolutely no geographic information whatsoever.",
         },
         { role: "user", content: textBlob },
       ],
@@ -226,16 +227,32 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
       return res.json(withTags(updated));
     }
 
-    const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(placeName)}&format=json&limit=1&addressdetails=1`;
-    const nominatimRes = await fetch(nominatimUrl, {
-      headers: { "User-Agent": "WhereTo/1.0 (travel decision app)" },
-    });
     type NominatimHit = {
       lat: string; lon: string; display_name: string;
       address?: { country_code?: string; country?: string; city?: string; town?: string; village?: string; county?: string; state?: string };
     };
-    const nominatimData = (await nominatimRes.json()) as NominatimHit[];
-    const hit = nominatimData[0];
+
+    async function nominatimSearch(query: string): Promise<NominatimHit | null> {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`;
+      const res = await fetch(url, { headers: { "User-Agent": "WhereTo/1.0 (travel decision app)" } });
+      const data = (await res.json()) as NominatimHit[];
+      return data[0] ?? null;
+    }
+
+    // Try full query first, then progressively strip leading component (venue name)
+    let hit = await nominatimSearch(placeName);
+    if (!hit) {
+      const parts = placeName.split(",").map((p: string) => p.trim());
+      if (parts.length > 2) {
+        // Try without the first part (e.g. skip specific lodge name, search city + country)
+        hit = await nominatimSearch(parts.slice(1).join(", "));
+      }
+      if (!hit && parts.length > 1) {
+        // Last resort: just the last two parts (region + country)
+        hit = await nominatimSearch(parts.slice(-2).join(", "));
+      }
+    }
+
     const lat = hit ? parseFloat(hit.lat) : null;
     const lng = hit ? parseFloat(hit.lon) : null;
     const countryCode = hit?.address?.country_code?.toUpperCase() ?? null;
@@ -256,7 +273,7 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
 
     const [updated] = await db
       .update(savesTable)
-      .set({ placeName: hit ? richPlaceName : null, countryCode, lat, lng })
+      .set({ placeName: hit ? richPlaceName : placeName, countryCode, lat, lng })
       .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
       .returning();
 

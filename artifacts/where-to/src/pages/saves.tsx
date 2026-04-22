@@ -748,12 +748,13 @@ export default function Saves() {
                               {saves.filter(s => s.lat != null).indexOf(save) + 1}
                             </span>
                           ) : (
-                            <span
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground"
-                              title="No location detected for this save"
+                            <button
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                              title="No location detected — click to retry"
+                              onClick={(e) => { e.stopPropagation(); geocodeSave.mutate({ id: save.id }); }}
                             >
                               <MapPinOff className="h-3.5 w-3.5" />
-                            </span>
+                            </button>
                           )}
                         </div>
                       </div>
