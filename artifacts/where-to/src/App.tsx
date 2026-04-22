@@ -173,6 +173,9 @@ function ClerkProviderWithRoutes() {
           <Route path="/decide">
             <ProtectedRoute component={Decide} />
           </Route>
+          <Route path="/history/:id">
+            <ProtectedRoute component={DecisionView} />
+          </Route>
           <Route path="/history">
             <ProtectedRoute component={History} />
           </Route>
