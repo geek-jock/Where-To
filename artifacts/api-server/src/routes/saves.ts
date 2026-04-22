@@ -14,6 +14,15 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+function parseTags(raw: string | null | undefined): string[] | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw) as string[]; } catch { return null; }
+}
+
+function withTags(save: any) {
+  return { ...save, tags: parseTags(save.tags) };
+}
+
 router.get("/", requireAuth, async (req: any, res) => {
   try {
     const saves = await db
@@ -21,7 +30,7 @@ router.get("/", requireAuth, async (req: any, res) => {
       .from(savesTable)
       .where(eq(savesTable.userId, req.userId))
       .orderBy(savesTable.createdAt);
-    return res.json(saves);
+    return res.json(saves.map(withTags));
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Failed to list saves" });
@@ -40,7 +49,7 @@ router.post("/", requireAuth, async (req: any, res) => {
       scrapedDescription: scrapedDescription ?? null,
       scrapedImage: scrapedImage ?? null,
     }).returning();
-    return res.status(201).json(save);
+    return res.status(201).json(withTags(save));
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Failed to create save" });
@@ -50,15 +59,15 @@ router.post("/", requireAuth, async (req: any, res) => {
 router.patch("/:id", requireAuth, async (req: any, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { scrapedTitle, scrapedDescription, scrapedImage, placeName, content } = req.body;
+    const { scrapedTitle, scrapedDescription, scrapedImage, placeName, content, tags } = req.body;
 
     const updateFields: Record<string, unknown> = {};
     if ("scrapedTitle" in req.body) updateFields.scrapedTitle = scrapedTitle ?? null;
     if ("scrapedDescription" in req.body) updateFields.scrapedDescription = scrapedDescription ?? null;
     if ("scrapedImage" in req.body) updateFields.scrapedImage = scrapedImage ?? null;
     if ("content" in req.body) updateFields.content = content ?? null;
+    if ("tags" in req.body) updateFields.tags = tags ? JSON.stringify(tags) : null;
 
-    // If placeName is being updated, re-geocode from the new name
     if ("placeName" in req.body && placeName) {
       updateFields.placeName = placeName;
       try {
@@ -66,7 +75,7 @@ router.patch("/:id", requireAuth, async (req: any, res) => {
         const nominatimRes = await fetch(nominatimUrl, {
           headers: { "User-Agent": "WhereTo/1.0 (travel decision app)" },
         });
-        type NominatimHit = { lat: string; lon: string; address?: { country_code?: string; city?: string; town?: string; county?: string; state?: string; country?: string } };
+        type NominatimHit = { lat: string; lon: string; address?: { country_code?: string } };
         const nominatimData = (await nominatimRes.json()) as NominatimHit[];
         const hit = nominatimData[0];
         if (hit) {
@@ -74,9 +83,7 @@ router.patch("/:id", requireAuth, async (req: any, res) => {
           updateFields.lng = parseFloat(hit.lon);
           updateFields.countryCode = hit.address?.country_code?.toUpperCase() ?? null;
         }
-      } catch {
-        // geocode failure is non-fatal
-      }
+      } catch { /* non-fatal */ }
     } else if ("placeName" in req.body && !placeName) {
       updateFields.placeName = null;
       updateFields.lat = null;
@@ -91,10 +98,61 @@ router.patch("/:id", requireAuth, async (req: any, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });
-    return res.json(updated);
+    return res.json(withTags(updated));
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Failed to update save" });
+  }
+});
+
+router.post("/:id/tag", requireAuth, async (req: any, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [save] = await db
+      .select()
+      .from(savesTable)
+      .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)));
+
+    if (!save) return res.status(404).json({ error: "Not found" });
+
+    const blob = [save.scrapedTitle, save.scrapedDescription, save.content, save.placeName]
+      .filter(Boolean).join(" | ");
+
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_completion_tokens: 60,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Generate 3-4 lowercase travel tags for this place. Choose from these categories:\n" +
+            "VIBE: coastal, mountain, desert, jungle, island, city, countryside, village\n" +
+            "TYPE: nature, foodie, cultural, adventure, wellness, nightlife, architecture, history\n" +
+            "FEEL: romantic, solo-friendly, off-beat, iconic, underrated, busy, peaceful\n" +
+            "LOGISTICS: budget-friendly, luxury, road-trip, hiking\n" +
+            "Reply with ONLY a JSON array of strings, e.g. [\"coastal\",\"foodie\",\"off-beat\"]",
+        },
+        { role: "user", content: blob },
+      ],
+    });
+
+    const raw = aiResponse.choices[0]?.message?.content?.trim() ?? "[]";
+    let tags: string[] = [];
+    try {
+      const parsed = JSON.parse(raw);
+      tags = Array.isArray(parsed) ? parsed.map(String).slice(0, 5) : [];
+    } catch { tags = []; }
+
+    const [updated] = await db
+      .update(savesTable)
+      .set({ tags: JSON.stringify(tags) })
+      .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
+      .returning();
+
+    return res.json(withTags(updated));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Failed to tag save" });
   }
 });
 
@@ -108,12 +166,8 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
 
     if (!save) return res.status(404).json({ error: "Not found" });
 
-    const textBlob = [
-      save.scrapedTitle,
-      save.scrapedDescription,
-      save.content,
-      save.url,
-    ].filter(Boolean).join(" | ");
+    const textBlob = [save.scrapedTitle, save.scrapedDescription, save.content, save.url]
+      .filter(Boolean).join(" | ");
 
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -139,7 +193,7 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
         .set({ placeName: null, countryCode: null, lat: null, lng: null })
         .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
         .returning();
-      return res.json(updated);
+      return res.json(withTags(updated));
     }
 
     const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(placeName)}&format=json&limit=1&addressdetails=1`;
@@ -147,27 +201,15 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
       headers: { "User-Agent": "WhereTo/1.0 (travel decision app)" },
     });
     type NominatimHit = {
-      lat: string;
-      lon: string;
-      display_name: string;
-      address?: {
-        country_code?: string;
-        country?: string;
-        city?: string;
-        town?: string;
-        village?: string;
-        county?: string;
-        state?: string;
-      };
+      lat: string; lon: string; display_name: string;
+      address?: { country_code?: string; country?: string; city?: string; town?: string; village?: string; county?: string; state?: string };
     };
     const nominatimData = (await nominatimRes.json()) as NominatimHit[];
-
     const hit = nominatimData[0];
     const lat = hit ? parseFloat(hit.lat) : null;
     const lng = hit ? parseFloat(hit.lon) : null;
     const countryCode = hit?.address?.country_code?.toUpperCase() ?? null;
 
-    // Build a rich place name from address components
     let richPlaceName = placeName;
     if (hit?.address) {
       const addr = hit.address;
@@ -176,28 +218,19 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
       const country = addr.country;
       const parts = [locality, region, country].filter(Boolean);
       if (parts.length >= 2) {
-        // If GPT's name is more specific than locality, prefix it
-        const gptParts = placeName.split(",").map((s: string) => s.trim());
-        const gptFirst = gptParts[0];
+        const gptFirst = placeName.split(",")[0].trim();
         const localityMatch = locality && gptFirst.toLowerCase().includes(locality.toLowerCase());
-        richPlaceName = !localityMatch && gptFirst
-          ? [gptFirst, ...parts].join(", ")
-          : parts.join(", ");
+        richPlaceName = !localityMatch && gptFirst ? [gptFirst, ...parts].join(", ") : parts.join(", ");
       }
     }
 
     const [updated] = await db
       .update(savesTable)
-      .set({
-        placeName: hit ? richPlaceName : null,
-        countryCode,
-        lat,
-        lng,
-      })
+      .set({ placeName: hit ? richPlaceName : null, countryCode, lat, lng })
       .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
       .returning();
 
-    return res.json(updated);
+    return res.json(withTags(updated));
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Failed to geocode save" });

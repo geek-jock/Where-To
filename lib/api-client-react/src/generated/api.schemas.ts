@@ -21,6 +21,7 @@ export interface Save {
   countryCode?: string | null;
   lat?: number | null;
   lng?: number | null;
+  tags?: string[] | null;
   createdAt: string;
 }
 
@@ -30,6 +31,7 @@ export interface UpdateSaveBody {
   scrapedImage?: string | null;
   placeName?: string | null;
   content?: string | null;
+  tags?: string[] | null;
 }
 
 export interface CreateSaveBody {

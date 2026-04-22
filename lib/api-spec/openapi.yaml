@@ -68,6 +68,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/Save"
 
+  /saves/{id}/tag:
+    post:
+      operationId: tagSave
+      tags: [saves]
+      summary: Generate AI tags for a save
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tagged save
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Save"
+
   /saves/{id}/geocode:
     post:
       operationId: geocodeSave
@@ -279,6 +300,11 @@ components:
         lng:
           type: number
           nullable: true
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
         createdAt:
           type: string
           format: date-time
@@ -306,6 +332,11 @@ components:
         content:
           type: string
           nullable: true
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
 
     CreateSaveBody:
       type: object

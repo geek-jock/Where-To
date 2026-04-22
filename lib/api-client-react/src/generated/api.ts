@@ -265,6 +265,90 @@ export const useCreateSave = <
 };
 
 /**
+ * @summary Generate AI tags for a save
+ */
+export const getTagSaveUrl = (id: number) => {
+  return `/api/saves/${id}/tag`;
+};
+
+export const tagSave = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Save> => {
+  return customFetch<Save>(getTagSaveUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getTagSaveMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof tagSave>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof tagSave>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["tagSave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof tagSave>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return tagSave(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TagSaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof tagSave>>
+>;
+
+export type TagSaveMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate AI tags for a save
+ */
+export const useTagSave = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof tagSave>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof tagSave>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getTagSaveMutationOptions(options));
+};
+
+/**
  * @summary Geocode a save using AI + Nominatim
  */
 export const getGeocodeSaveUrl = (id: number) => {

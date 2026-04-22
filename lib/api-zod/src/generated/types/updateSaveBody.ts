@@ -12,4 +12,5 @@ export interface UpdateSaveBody {
   scrapedImage?: string | null;
   placeName?: string | null;
   content?: string | null;
+  tags?: string[] | null;
 }

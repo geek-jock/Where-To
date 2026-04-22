@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
@@ -8,11 +8,12 @@ import {
   useScrapeUrl,
   useGeocodeSave,
   useUpdateSave,
+  useTagSave,
   getListSavesQueryKey 
 } from "@workspace/api-client-react";
 import type { Save } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, ImagePlus, RefreshCw } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, ImagePlus, RefreshCw, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SavesMap } from "@/components/saves-map";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { parseDescription } from "@/lib/parse-description";
+
+function TagPill({ tag }: { tag: string }) {
+  return (
+    <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium border border-border text-muted-foreground bg-muted/30 rounded-sm">
+      {tag}
+    </span>
+  );
+}
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/60">{label}</p>
+      {children}
+    </div>
+  );
+}
 
 function SaveDetailDialog({
   save,
@@ -40,30 +58,29 @@ function SaveDetailDialog({
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [placeName, setPlaceName] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [imageError, setImageError] = useState(false);
 
   const updateSave = useUpdateSave();
   const scrapeUrl = useScrapeUrl();
   const { toast } = useToast();
 
-  // Sync fields when save changes or edit mode opens
   const startEdit = () => {
     if (!save) return;
     setTitle(save.scrapedTitle ?? "");
     setDescription(parseDescription(save.scrapedDescription) ?? "");
     setImageUrl(save.scrapedImage ?? "");
     setPlaceName(save.placeName ?? "");
+    setTagsInput((save.tags ?? []).join(", "));
     setImageError(false);
     setEditing(true);
   };
 
-  const cancelEdit = () => {
-    setEditing(false);
-    setImageError(false);
-  };
+  const cancelEdit = () => { setEditing(false); setImageError(false); };
 
   const handleSave = async () => {
     if (!save) return;
+    const newTags = tagsInput.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
     try {
       const updated = await updateSave.mutateAsync({
         id: save.id,
@@ -72,6 +89,7 @@ function SaveDetailDialog({
           scrapedDescription: description.trim() || null,
           scrapedImage: imageUrl.trim() || null,
           placeName: placeName.trim() || null,
+          tags: newTags.length > 0 ? newTags : null,
         },
       });
       onSaved(updated);
@@ -86,13 +104,8 @@ function SaveDetailDialog({
     if (!save?.url) return;
     try {
       const result = await scrapeUrl.mutateAsync({ data: { url: save.url } });
-      if (result.image) {
-        setImageUrl(result.image);
-        setImageError(false);
-        toast({ title: "Image found" });
-      } else {
-        toast({ title: "No image found at this URL", variant: "destructive" });
-      }
+      if (result.image) { setImageUrl(result.image); setImageError(false); toast({ title: "Image found" }); }
+      else toast({ title: "No image found at this URL", variant: "destructive" });
     } catch {
       toast({ title: "Couldn't fetch image", variant: "destructive" });
     }
@@ -100,163 +113,159 @@ function SaveDetailDialog({
 
   if (!save) return null;
   const cleanedDescription = parseDescription(save.scrapedDescription);
+  const tags = save.tags ?? [];
+  const isNote = !save.url;
+  const hasOwnNote = save.scrapedTitle && save.content && save.content !== save.url;
+
+  // Determine source domain for display
+  let sourceDomain = "";
+  try { if (save.url) sourceDomain = new URL(save.url).hostname.replace("www.", ""); } catch { /* ignore */ }
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { onClose(); setEditing(false); } }}>
       <DialogContent className="max-w-lg p-0 overflow-hidden gap-0 max-h-[90dvh] flex flex-col">
 
-        {/* Image area */}
+        {/* ── Image ── */}
         {editing ? (
-          <div className="flex-shrink-0 border-b border-border">
+          <div className="flex-shrink-0 border-b border-border bg-muted/20">
             {imageUrl && !imageError ? (
               <div className="relative h-40">
-                <img
-                  src={imageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  onError={() => setImageError(true)}
-                />
-                <button
-                  className="absolute top-2 right-2 bg-background/80 rounded-full p-1 hover:bg-background"
-                  onClick={() => { setImageUrl(""); setImageError(false); }}
-                >
+                <img src={imageUrl} alt="" className="w-full h-full object-cover" onError={() => setImageError(true)} />
+                <button className="absolute top-2 right-2 bg-background/80 rounded-full p-1 hover:bg-background" onClick={() => { setImageUrl(""); setImageError(false); }}>
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-            ) : (
-              <div className="h-12 flex items-center px-4 gap-2">
-                <ImagePlus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <Input
-                  placeholder="Image URL (paste or fetch below)"
-                  value={imageUrl}
-                  onChange={e => { setImageUrl(e.target.value); setImageError(false); }}
-                  className="flex-1 h-8 text-sm"
-                />
-                {save.url && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs gap-1 flex-shrink-0"
-                    onClick={handleFetchImage}
-                    disabled={scrapeUrl.isPending}
-                  >
-                    {scrapeUrl.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                    Fetch
-                  </Button>
-                )}
-              </div>
-            )}
-            {imageUrl && !imageError && (
-              <div className="px-4 pb-2 flex items-center gap-2">
-                <Input
-                  placeholder="Image URL"
-                  value={imageUrl}
-                  onChange={e => { setImageUrl(e.target.value); setImageError(false); }}
-                  className="flex-1 h-7 text-xs"
-                />
-                {save.url && (
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleFetchImage} disabled={scrapeUrl.isPending}>
-                    {scrapeUrl.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                  </Button>
-                )}
-              </div>
-            )}
+            ) : null}
+            <div className="flex items-center gap-2 px-4 py-2.5">
+              <ImagePlus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Input placeholder="Image URL" value={imageUrl} onChange={e => { setImageUrl(e.target.value); setImageError(false); }} className="flex-1 h-8 text-sm" />
+              {save.url && (
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1 flex-shrink-0" onClick={handleFetchImage} disabled={scrapeUrl.isPending}>
+                  {scrapeUrl.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  Fetch
+                </Button>
+              )}
+            </div>
           </div>
         ) : save.scrapedImage ? (
-          <div className="h-48 w-full overflow-hidden flex-shrink-0">
+          <div className="h-52 w-full overflow-hidden flex-shrink-0">
             <img src={save.scrapedImage} alt="" className="w-full h-full object-cover" />
           </div>
         ) : null}
 
-        {/* Scrollable body */}
-        <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
-          <DialogHeader>
-            <div className="flex items-start justify-between gap-2">
-              {editing ? (
-                <Input
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="Title"
-                  className="font-serif text-lg flex-1"
-                />
-              ) : (
-                <DialogTitle className="font-serif text-xl leading-snug text-left flex-1">
-                  {save.scrapedTitle || save.placeName || "Saved note"}
-                </DialogTitle>
-              )}
+        {/* ── Scrollable body ── */}
+        <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-border">
+
+          {/* Header: title + edit */}
+          <div className="px-6 py-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                {editing ? (
+                  <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="font-serif text-base" />
+                ) : (
+                  <DialogHeader>
+                    <DialogTitle className="font-serif text-xl leading-snug text-left">
+                      {save.scrapedTitle || save.placeName || "Saved note"}
+                    </DialogTitle>
+                  </DialogHeader>
+                )}
+                {!editing && save.placeName && (
+                  <p className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+                    <span className="font-medium text-foreground">{save.placeName}</span>
+                    {save.countryCode && <span className="opacity-50">· {save.countryCode}</span>}
+                  </p>
+                )}
+              </div>
               {!editing && (
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-muted-foreground" onClick={startEdit}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-muted-foreground mt-0.5" onClick={startEdit}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
-          </DialogHeader>
+          </div>
 
-          {/* Description */}
-          {editing ? (
-            <Textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Description"
-              className="text-sm min-h-[100px] resize-none"
-            />
-          ) : cleanedDescription ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">{cleanedDescription}</p>
-          ) : null}
-
-          {/* Note / content */}
-          {!editing && save.scrapedTitle && save.content !== save.url && (
-            <div className="border-t border-border pt-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Your note</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap">{save.content}</p>
-            </div>
-          )}
-          {!editing && !save.scrapedTitle && (
-            <div className="border-t border-border pt-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Note</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap">{save.content}</p>
+          {/* Tags */}
+          {(tags.length > 0 || editing) && (
+            <div className="px-6 py-4">
+              <Section label="Tags">
+                {editing ? (
+                  <div className="space-y-1.5">
+                    <Input
+                      value={tagsInput}
+                      onChange={e => setTagsInput(e.target.value)}
+                      placeholder="coastal, foodie, off-beat (comma separated)"
+                      className="h-8 text-sm"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Separate with commas. Edit freely.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map(t => <TagPill key={t} tag={t} />)}
+                  </div>
+                )}
+              </Section>
             </div>
           )}
 
-          {/* Metadata footer */}
-          <div className="border-t border-border pt-4 space-y-2 text-xs text-muted-foreground">
-            {save.url && (
-              <div className="flex items-start gap-2">
-                <Globe className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-primary" />
-                <a href={save.url} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all flex items-center gap-1">
-                  {save.url}
-                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                </a>
-              </div>
-            )}
+          {/* About (description) */}
+          {(cleanedDescription || editing) && (
+            <div className="px-6 py-4">
+              <Section label="About">
+                {editing ? (
+                  <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" className="text-sm min-h-[90px] resize-none" />
+                ) : (
+                  <p className="text-sm text-foreground/80 leading-relaxed">{cleanedDescription}</p>
+                )}
+              </Section>
+            </div>
+          )}
 
-            {/* Place name */}
-            <div className="flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+          {/* Your note (user-typed note separate from scraped description) */}
+          {!editing && (hasOwnNote || isNote) && (
+            <div className="px-6 py-4">
+              <Section label={isNote ? "Note" : "Your note"}>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{save.content}</p>
+              </Section>
+            </div>
+          )}
+
+          {/* Location */}
+          <div className="px-6 py-4">
+            <Section label="Location">
               {editing ? (
-                <Input
-                  value={placeName}
-                  onChange={e => setPlaceName(e.target.value)}
-                  placeholder="City, Country (will re-geocode on save)"
-                  className="h-7 text-xs flex-1"
-                />
+                <Input value={placeName} onChange={e => setPlaceName(e.target.value)} placeholder="City, Country (will re-geocode on save)" className="h-8 text-sm" />
               ) : save.placeName ? (
-                <span className="text-foreground font-medium">{save.placeName}</span>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">{save.placeName}</p>
+                  {save.lat != null && save.lng != null && (
+                    <p className="text-xs text-muted-foreground font-mono">{save.lat.toFixed(5)}, {save.lng.toFixed(5)}</p>
+                  )}
+                </div>
               ) : (
-                <span className="italic opacity-50">No location — edit to add one</span>
+                <p className="text-sm text-muted-foreground italic">No location detected — edit to add one</p>
               )}
-            </div>
+            </Section>
+          </div>
 
-            {save.lat != null && save.lng != null && !editing && (
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 text-center text-[10px]">📍</span>
-                <span className="font-mono">{save.lat.toFixed(4)}, {save.lng.toFixed(4)}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="w-3.5 text-center text-[10px]">📅</span>
-              <span>{format(new Date(save.createdAt), "MMMM d, yyyy 'at' h:mm a")}</span>
+          {/* Source */}
+          {save.url && (
+            <div className="px-6 py-4">
+              <Section label="Source">
+                <a href={save.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline group">
+                  <Globe className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{sourceDomain || save.url}</span>
+                  <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </a>
+              </Section>
             </div>
+          )}
+
+          {/* Meta */}
+          <div className="px-6 py-4 bg-muted/20">
+            <p className="text-[10px] text-muted-foreground">
+              Saved {format(new Date(save.createdAt), "MMMM d, yyyy 'at' h:mm a")}
+            </p>
           </div>
         </div>
 
@@ -287,6 +296,7 @@ export default function Saves() {
   const deleteSave = useDeleteSave();
   const scrapeUrl = useScrapeUrl();
   const geocodeSave = useGeocodeSave();
+  const tagSave = useTagSave();
 
   const [urlInput, setUrlInput] = useState("");
   const [textInput, setTextInput] = useState("");
@@ -342,9 +352,12 @@ export default function Saves() {
       setScrapedData(null);
       setUrlInput("");
       toast({ title: "Saved successfully" });
-      geocodeSave.mutateAsync({ id: save.id }).then(() => {
+      Promise.all([
+        geocodeSave.mutateAsync({ id: save.id }),
+        tagSave.mutateAsync({ id: save.id }),
+      ]).finally(() => {
         queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
-      }).catch(() => {});
+      });
     } catch {
       toast({ title: "Failed to save", variant: "destructive" });
     }
@@ -359,9 +372,12 @@ export default function Saves() {
       queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
       setTextInput("");
       toast({ title: "Saved successfully" });
-      geocodeSave.mutateAsync({ id: save.id }).then(() => {
+      Promise.all([
+        geocodeSave.mutateAsync({ id: save.id }),
+        tagSave.mutateAsync({ id: save.id }),
+      ]).finally(() => {
         queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
-      }).catch(() => {});
+      });
     } catch {
       toast({ title: "Failed to save", variant: "destructive" });
     }
@@ -607,6 +623,20 @@ export default function Saves() {
                         </div>
                       </div>
                     </CardContent>
+                    {/* Tags row */}
+                    {save.tags && save.tags.length > 0 && (
+                      <div className="px-5 pb-3 flex flex-wrap gap-1.5">
+                        {save.tags.slice(0, 3).map(tag => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium tracking-wide border border-border/60 text-muted-foreground bg-muted/20 rounded-sm"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <CardFooter className="p-4 pt-0 flex justify-between items-center bg-card mt-auto text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         {save.placeName && (

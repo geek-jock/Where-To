@@ -30,6 +30,7 @@ export const ListSavesResponseItem = zod.object({
   countryCode: zod.string().nullish(),
   lat: zod.number().nullish(),
   lng: zod.number().nullish(),
+  tags: zod.array(zod.string()).nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListSavesResponse = zod.array(ListSavesResponseItem);
@@ -43,6 +44,29 @@ export const CreateSaveBody = zod.object({
   scrapedTitle: zod.string().nullish(),
   scrapedDescription: zod.string().nullish(),
   scrapedImage: zod.string().nullish(),
+});
+
+/**
+ * @summary Generate AI tags for a save
+ */
+export const TagSaveParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const TagSaveResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  content: zod.string(),
+  url: zod.string().nullish(),
+  scrapedTitle: zod.string().nullish(),
+  scrapedDescription: zod.string().nullish(),
+  scrapedImage: zod.string().nullish(),
+  placeName: zod.string().nullish(),
+  countryCode: zod.string().nullish(),
+  lat: zod.number().nullish(),
+  lng: zod.number().nullish(),
+  tags: zod.array(zod.string()).nullish(),
+  createdAt: zod.coerce.date(),
 });
 
 /**
@@ -64,6 +88,7 @@ export const GeocodeSaveResponse = zod.object({
   countryCode: zod.string().nullish(),
   lat: zod.number().nullish(),
   lng: zod.number().nullish(),
+  tags: zod.array(zod.string()).nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -80,6 +105,7 @@ export const UpdateSaveBody = zod.object({
   scrapedImage: zod.string().nullish(),
   placeName: zod.string().nullish(),
   content: zod.string().nullish(),
+  tags: zod.array(zod.string()).nullish(),
 });
 
 export const UpdateSaveResponse = zod.object({
@@ -94,6 +120,7 @@ export const UpdateSaveResponse = zod.object({
   countryCode: zod.string().nullish(),
   lat: zod.number().nullish(),
   lng: zod.number().nullish(),
+  tags: zod.array(zod.string()).nullish(),
   createdAt: zod.coerce.date(),
 });
 

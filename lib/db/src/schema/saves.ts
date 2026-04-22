@@ -14,6 +14,7 @@ export const savesTable = pgTable("saves", {
   countryCode: text("country_code"),
   lat: real("lat"),
   lng: real("lng"),
+  tags: text("tags"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

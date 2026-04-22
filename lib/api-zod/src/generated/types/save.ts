@@ -18,5 +18,6 @@ export interface Save {
   countryCode?: string | null;
   lat?: number | null;
   lng?: number | null;
+  tags?: string[] | null;
   createdAt: Date;
 }
