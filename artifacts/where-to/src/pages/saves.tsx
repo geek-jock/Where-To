@@ -13,7 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Save } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, ImagePlus, RefreshCw, Tag } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, ImagePlus, RefreshCw, Tag, Building2, UtensilsCrossed, Star, TreePine, Landmark, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +39,51 @@ function Section({ label, children }: { label: string; children: React.ReactNode
       <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/60">{label}</p>
       {children}
     </div>
+  );
+}
+
+const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; label: string; linkLabel: string }> = {
+  hotel:        { icon: Building2,       label: "Hotel",       linkLabel: "Book on Booking.com" },
+  hostel:       { icon: Building2,       label: "Hostel",      linkLabel: "Book on Booking.com" },
+  resort:       { icon: Building2,       label: "Resort",      linkLabel: "Book on Booking.com" },
+  accommodation:{ icon: Building2,       label: "Stay",        linkLabel: "Book on Booking.com" },
+  restaurant:   { icon: UtensilsCrossed, label: "Restaurant",  linkLabel: "Find on Google Maps" },
+  café:         { icon: UtensilsCrossed, label: "Café",        linkLabel: "Find on Google Maps" },
+  cafe:         { icon: UtensilsCrossed, label: "Café",        linkLabel: "Find on Google Maps" },
+  bar:          { icon: UtensilsCrossed, label: "Bar",         linkLabel: "Find on Google Maps" },
+  food:         { icon: UtensilsCrossed, label: "Food",        linkLabel: "Find on Google Maps" },
+  attraction:   { icon: Star,            label: "Attraction",  linkLabel: "Find on TripAdvisor" },
+  landmark:     { icon: Star,            label: "Landmark",    linkLabel: "Find on TripAdvisor" },
+  museum:       { icon: Landmark,        label: "Museum",      linkLabel: "Find on TripAdvisor" },
+  gallery:      { icon: Landmark,        label: "Gallery",     linkLabel: "Find on TripAdvisor" },
+  park:         { icon: TreePine,        label: "Park",        linkLabel: "View on Google Maps" },
+  beach:        { icon: TreePine,        label: "Beach",       linkLabel: "View on Google Maps" },
+  nature:       { icon: TreePine,        label: "Nature",      linkLabel: "View on Google Maps" },
+  reserve:      { icon: TreePine,        label: "Reserve",     linkLabel: "View on Google Maps" },
+  viewpoint:    { icon: Star,            label: "Viewpoint",   linkLabel: "View on Google Maps" },
+  market:       { icon: ShoppingBag,     label: "Market",      linkLabel: "View on Google Maps" },
+  neighborhood: { icon: MapPin,          label: "Neighborhood","linkLabel": "View on Google Maps" },
+  experience:   { icon: Star,            label: "Experience",  linkLabel: "View on Google Maps" },
+  activity:     { icon: Star,            label: "Activity",    linkLabel: "View on Google Maps" },
+  spa:          { icon: Star,            label: "Spa",         linkLabel: "Find on Google Maps" },
+};
+
+function getCategoryConfig(category: string | null | undefined) {
+  if (!category) return null;
+  return CATEGORY_CONFIG[category.toLowerCase()] ?? { icon: MapPin, label: capitalize(category), linkLabel: "View on Google Maps" };
+}
+
+function capitalize(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function CategoryBadge({ category }: { category: string }) {
+  const config = getCategoryConfig(category);
+  if (!config) return null;
+  const Icon = config.icon;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase border border-primary/30 text-primary bg-primary/5 rounded-sm">
+      <Icon className="h-2.5 w-2.5" />
+      {config.label}
+    </span>
   );
 }
 
@@ -169,12 +214,17 @@ function SaveDetailDialog({
                     </DialogTitle>
                   </DialogHeader>
                 )}
-                {!editing && save.placeName && (
-                  <p className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
-                    <span className="font-medium text-foreground">{save.placeName}</span>
-                    {save.countryCode && <span className="opacity-50">· {save.countryCode}</span>}
-                  </p>
+                {!editing && (save.placeName || save.category) && (
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {save.category && <CategoryBadge category={save.category} />}
+                    {save.placeName && (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+                        <span className="font-medium text-foreground">{save.placeName}</span>
+                        {save.countryCode && <span className="opacity-50">· {save.countryCode}</span>}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
               {!editing && (
@@ -248,15 +298,35 @@ function SaveDetailDialog({
             </Section>
           </div>
 
-          {/* Source */}
-          {save.url && (
+          {/* Source + Official Link */}
+          {(save.url || save.officialLink) && (
             <div className="px-6 py-4">
-              <Section label="Source">
-                <a href={save.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline group">
-                  <Globe className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="truncate">{sourceDomain || save.url}</span>
-                  <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </a>
+              <Section label="Links">
+                <div className="space-y-2">
+                  {save.url && (
+                    <a href={save.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground group">
+                      <Globe className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      <span className="truncate">{sourceDomain || save.url}</span>
+                      <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                  )}
+                  {save.officialLink && (
+                    <a
+                      href={save.officialLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 text-sm font-medium text-primary hover:underline group"
+                    >
+                      {(() => {
+                        const config = getCategoryConfig(save.category);
+                        const Icon = config?.icon ?? Globe;
+                        return <Icon className="h-3.5 w-3.5 flex-shrink-0" />;
+                      })()}
+                      <span>{getCategoryConfig(save.category)?.linkLabel ?? "View on Google Maps"}</span>
+                      <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                  )}
+                </div>
               </Section>
             </div>
           )}
@@ -563,11 +633,20 @@ export default function Saves() {
                     onClick={() => toggleSelect(save.id)}
                     data-testid={`card-save-${save.id}`}
                   >
-                    {save.scrapedImage && (
-                      <div className="h-32 w-full overflow-hidden border-b border-border">
+                    {save.scrapedImage ? (
+                      <div className="relative h-32 w-full overflow-hidden border-b border-border">
                         <img src={save.scrapedImage} alt="" className="w-full h-full object-cover" />
+                        {save.category && (
+                          <div className="absolute bottom-2 left-2">
+                            <CategoryBadge category={save.category} />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ) : save.category ? (
+                      <div className="px-5 pt-4 pb-0">
+                        <CategoryBadge category={save.category} />
+                      </div>
+                    ) : null}
                     <CardContent className="p-5 flex-1">
                       <div className="flex items-start gap-2">
                         <div className="flex-1 min-w-0">

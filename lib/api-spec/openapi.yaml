@@ -305,6 +305,12 @@ components:
           nullable: true
           items:
             type: string
+        category:
+          type: string
+          nullable: true
+        officialLink:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -337,6 +343,12 @@ components:
           nullable: true
           items:
             type: string
+        category:
+          type: string
+          nullable: true
+        officialLink:
+          type: string
+          nullable: true
 
     CreateSaveBody:
       type: object

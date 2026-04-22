@@ -15,6 +15,8 @@ export const savesTable = pgTable("saves", {
   lat: real("lat"),
   lng: real("lng"),
   tags: text("tags"),
+  category: text("category"),
+  officialLink: text("official_link"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

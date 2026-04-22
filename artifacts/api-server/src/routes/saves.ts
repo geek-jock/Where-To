@@ -23,6 +23,26 @@ function withTags(save: any) {
   return { ...save, tags: parseTags(save.tags) };
 }
 
+function buildOfficialLink(category: string | null, placeName: string | null): string | null {
+  if (!placeName) return null;
+  const q = encodeURIComponent(placeName);
+  const cat = (category ?? "").toLowerCase();
+  if (cat === "hotel" || cat === "hostel" || cat === "accommodation" || cat === "resort") {
+    return `https://www.booking.com/search.html?ss=${q}`;
+  }
+  if (cat === "restaurant" || cat === "café" || cat === "cafe" || cat === "bar" || cat === "food") {
+    return `https://www.google.com/maps/search/${q}+restaurant`;
+  }
+  if (cat === "attraction" || cat === "museum" || cat === "gallery" || cat === "landmark") {
+    return `https://www.tripadvisor.com/Search?q=${q}`;
+  }
+  if (cat === "park" || cat === "beach" || cat === "nature" || cat === "reserve") {
+    return `https://www.google.com/maps/search/${q}`;
+  }
+  // Default: Google Maps search
+  return `https://www.google.com/maps/search/${q}`;
+}
+
 router.get("/", requireAuth, async (req: any, res) => {
   try {
     const saves = await db
@@ -59,7 +79,7 @@ router.post("/", requireAuth, async (req: any, res) => {
 router.patch("/:id", requireAuth, async (req: any, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { scrapedTitle, scrapedDescription, scrapedImage, placeName, content, tags } = req.body;
+    const { scrapedTitle, scrapedDescription, scrapedImage, placeName, content, tags, category, officialLink } = req.body;
 
     const updateFields: Record<string, unknown> = {};
     if ("scrapedTitle" in req.body) updateFields.scrapedTitle = scrapedTitle ?? null;
@@ -67,6 +87,8 @@ router.patch("/:id", requireAuth, async (req: any, res) => {
     if ("scrapedImage" in req.body) updateFields.scrapedImage = scrapedImage ?? null;
     if ("content" in req.body) updateFields.content = content ?? null;
     if ("tags" in req.body) updateFields.tags = tags ? JSON.stringify(tags) : null;
+    if ("category" in req.body) updateFields.category = category ?? null;
+    if ("officialLink" in req.body) updateFields.officialLink = officialLink ?? null;
 
     if ("placeName" in req.body && placeName) {
       updateFields.placeName = placeName;
@@ -120,32 +142,40 @@ router.post("/:id/tag", requireAuth, async (req: any, res) => {
 
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      max_completion_tokens: 60,
+      max_completion_tokens: 120,
       messages: [
         {
           role: "system",
           content:
-            "Generate 3-4 lowercase travel tags for this place. Choose from these categories:\n" +
-            "VIBE: coastal, mountain, desert, jungle, island, city, countryside, village\n" +
-            "TYPE: nature, foodie, cultural, adventure, wellness, nightlife, architecture, history\n" +
-            "FEEL: romantic, solo-friendly, off-beat, iconic, underrated, busy, peaceful\n" +
-            "LOGISTICS: budget-friendly, luxury, road-trip, hiking\n" +
-            "Reply with ONLY a JSON array of strings, e.g. [\"coastal\",\"foodie\",\"off-beat\"]",
+            "Analyze this travel place and return a JSON object with two fields:\n" +
+            "1. \"tags\": 3-4 lowercase descriptive tags. Choose from:\n" +
+            "   VIBE: coastal, mountain, desert, jungle, island, city, countryside, village\n" +
+            "   TYPE: nature, foodie, cultural, adventure, wellness, nightlife, architecture, history\n" +
+            "   FEEL: romantic, solo-friendly, off-beat, iconic, underrated, busy, peaceful\n" +
+            "   LOGISTICS: budget-friendly, luxury, road-trip, hiking\n" +
+            "2. \"category\": ONE word classifying the place type. Choose from:\n" +
+            "   hotel, hostel, resort, restaurant, café, bar, attraction, museum, gallery,\n" +
+            "   landmark, park, beach, neighborhood, experience, activity, viewpoint, market, spa\n" +
+            "Reply ONLY with a JSON object, e.g. {\"tags\":[\"coastal\",\"iconic\"],\"category\":\"attraction\"}",
         },
         { role: "user", content: blob },
       ],
     });
 
-    const raw = aiResponse.choices[0]?.message?.content?.trim() ?? "[]";
+    const raw = aiResponse.choices[0]?.message?.content?.trim() ?? "{}";
     let tags: string[] = [];
+    let category: string | null = null;
     try {
       const parsed = JSON.parse(raw);
-      tags = Array.isArray(parsed) ? parsed.map(String).slice(0, 5) : [];
-    } catch { tags = []; }
+      if (parsed.tags && Array.isArray(parsed.tags)) tags = parsed.tags.map(String).slice(0, 5);
+      if (parsed.category && typeof parsed.category === "string") category = parsed.category.toLowerCase();
+    } catch { /* keep defaults */ }
+
+    const officialLink = buildOfficialLink(category, save.placeName);
 
     const [updated] = await db
       .update(savesTable)
-      .set({ tags: JSON.stringify(tags) })
+      .set({ tags: JSON.stringify(tags), category, officialLink })
       .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
       .returning();
 

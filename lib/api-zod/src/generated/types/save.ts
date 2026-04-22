@@ -19,5 +19,7 @@ export interface Save {
   lat?: number | null;
   lng?: number | null;
   tags?: string[] | null;
+  category?: string | null;
+  officialLink?: string | null;
   createdAt: Date;
 }

@@ -13,4 +13,6 @@ export interface UpdateSaveBody {
   placeName?: string | null;
   content?: string | null;
   tags?: string[] | null;
+  category?: string | null;
+  officialLink?: string | null;
 }

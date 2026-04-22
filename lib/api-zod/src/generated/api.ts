@@ -31,6 +31,8 @@ export const ListSavesResponseItem = zod.object({
   lat: zod.number().nullish(),
   lng: zod.number().nullish(),
   tags: zod.array(zod.string()).nullish(),
+  category: zod.string().nullish(),
+  officialLink: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListSavesResponse = zod.array(ListSavesResponseItem);
@@ -66,6 +68,8 @@ export const TagSaveResponse = zod.object({
   lat: zod.number().nullish(),
   lng: zod.number().nullish(),
   tags: zod.array(zod.string()).nullish(),
+  category: zod.string().nullish(),
+  officialLink: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -89,6 +93,8 @@ export const GeocodeSaveResponse = zod.object({
   lat: zod.number().nullish(),
   lng: zod.number().nullish(),
   tags: zod.array(zod.string()).nullish(),
+  category: zod.string().nullish(),
+  officialLink: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -106,6 +112,8 @@ export const UpdateSaveBody = zod.object({
   placeName: zod.string().nullish(),
   content: zod.string().nullish(),
   tags: zod.array(zod.string()).nullish(),
+  category: zod.string().nullish(),
+  officialLink: zod.string().nullish(),
 });
 
 export const UpdateSaveResponse = zod.object({
@@ -121,6 +129,8 @@ export const UpdateSaveResponse = zod.object({
   lat: zod.number().nullish(),
   lng: zod.number().nullish(),
   tags: zod.array(zod.string()).nullish(),
+  category: zod.string().nullish(),
+  officialLink: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
