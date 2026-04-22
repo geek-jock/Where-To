@@ -21,9 +21,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SavesMap } from "@/components/saves-map";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { parseDescription } from "@/lib/parse-description";
 
 function SaveDetailDialog({ save, open, onClose }: { save: Save | null; open: boolean; onClose: () => void }) {
   if (!save) return null;
+  const cleanedDescription = parseDescription(save.scrapedDescription);
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg p-0 overflow-hidden gap-0 max-h-[90dvh] flex flex-col">
@@ -39,8 +41,8 @@ function SaveDetailDialog({ save, open, onClose }: { save: Save | null; open: bo
             </DialogTitle>
           </DialogHeader>
 
-          {save.scrapedDescription && (
-            <p className="text-sm text-muted-foreground leading-relaxed">{save.scrapedDescription}</p>
+          {cleanedDescription && (
+            <p className="text-sm text-muted-foreground leading-relaxed">{cleanedDescription}</p>
           )}
 
           {save.scrapedTitle && save.content !== save.url && (
