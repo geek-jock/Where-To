@@ -1,8 +1,7 @@
 import { useGetDecision } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Check } from "lucide-react";
 import { parseDecision } from "@/lib/decision-parser";
-import { Check } from "lucide-react";
 
 export default function DecisionView() {
   const params = useParams();

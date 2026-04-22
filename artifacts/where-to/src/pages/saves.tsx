@@ -8,7 +8,7 @@ import {
   getListSavesQueryKey 
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
