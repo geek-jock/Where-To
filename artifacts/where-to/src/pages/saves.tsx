@@ -26,13 +26,13 @@ function SaveDetailDialog({ save, open, onClose }: { save: Save | null; open: bo
   if (!save) return null;
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden gap-0">
+      <DialogContent className="max-w-lg p-0 overflow-hidden gap-0 max-h-[90dvh] flex flex-col">
         {save.scrapedImage && (
-          <div className="h-48 w-full overflow-hidden">
+          <div className="h-48 w-full overflow-hidden flex-shrink-0">
             <img src={save.scrapedImage} alt="" className="w-full h-full object-cover" />
           </div>
         )}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           <DialogHeader>
             <DialogTitle className="font-serif text-xl leading-snug text-left">
               {save.scrapedTitle || save.placeName || "Saved note"}
