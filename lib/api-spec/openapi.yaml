@@ -90,6 +90,31 @@ paths:
                 $ref: "#/components/schemas/Save"
 
   /saves/{id}:
+    patch:
+      operationId: updateSave
+      tags: [saves]
+      summary: Update editable fields of a save
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSaveBody"
+      responses:
+        "200":
+          description: Updated save
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Save"
     delete:
       operationId: deleteSave
       tags: [saves]
@@ -262,6 +287,25 @@ components:
         - userId
         - content
         - createdAt
+
+    UpdateSaveBody:
+      type: object
+      properties:
+        scrapedTitle:
+          type: string
+          nullable: true
+        scrapedDescription:
+          type: string
+          nullable: true
+        scrapedImage:
+          type: string
+          nullable: true
+        placeName:
+          type: string
+          nullable: true
+        content:
+          type: string
+          nullable: true
 
     CreateSaveBody:
       type: object

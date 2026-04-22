@@ -24,6 +24,14 @@ export interface Save {
   createdAt: string;
 }
 
+export interface UpdateSaveBody {
+  scrapedTitle?: string | null;
+  scrapedDescription?: string | null;
+  scrapedImage?: string | null;
+  placeName?: string | null;
+  content?: string | null;
+}
+
 export interface CreateSaveBody {
   content: string;
   url?: string | null;

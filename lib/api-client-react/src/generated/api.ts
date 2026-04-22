@@ -25,6 +25,7 @@ import type {
   Save,
   ScrapeResult,
   ScrapeUrlBody,
+  UpdateSaveBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -345,6 +346,93 @@ export const useGeocodeSave = <
   TContext
 > => {
   return useMutation(getGeocodeSaveMutationOptions(options));
+};
+
+/**
+ * @summary Update editable fields of a save
+ */
+export const getUpdateSaveUrl = (id: number) => {
+  return `/api/saves/${id}`;
+};
+
+export const updateSave = async (
+  id: number,
+  updateSaveBody: UpdateSaveBody,
+  options?: RequestInit,
+): Promise<Save> => {
+  return customFetch<Save>(getUpdateSaveUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateSaveBody),
+  });
+};
+
+export const getUpdateSaveMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSave>>,
+    TError,
+    { id: number; data: BodyType<UpdateSaveBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSave>>,
+  TError,
+  { id: number; data: BodyType<UpdateSaveBody> },
+  TContext
+> => {
+  const mutationKey = ["updateSave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSave>>,
+    { id: number; data: BodyType<UpdateSaveBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSave(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSave>>
+>;
+export type UpdateSaveMutationBody = BodyType<UpdateSaveBody>;
+export type UpdateSaveMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update editable fields of a save
+ */
+export const useUpdateSave = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSave>>,
+    TError,
+    { id: number; data: BodyType<UpdateSaveBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateSave>>,
+  TError,
+  { id: number; data: BodyType<UpdateSaveBody> },
+  TContext
+> => {
+  return useMutation(getUpdateSaveMutationOptions(options));
 };
 
 /**

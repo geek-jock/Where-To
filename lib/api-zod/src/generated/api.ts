@@ -68,6 +68,36 @@ export const GeocodeSaveResponse = zod.object({
 });
 
 /**
+ * @summary Update editable fields of a save
+ */
+export const UpdateSaveParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateSaveBody = zod.object({
+  scrapedTitle: zod.string().nullish(),
+  scrapedDescription: zod.string().nullish(),
+  scrapedImage: zod.string().nullish(),
+  placeName: zod.string().nullish(),
+  content: zod.string().nullish(),
+});
+
+export const UpdateSaveResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  content: zod.string(),
+  url: zod.string().nullish(),
+  scrapedTitle: zod.string().nullish(),
+  scrapedDescription: zod.string().nullish(),
+  scrapedImage: zod.string().nullish(),
+  placeName: zod.string().nullish(),
+  countryCode: zod.string().nullish(),
+  lat: zod.number().nullish(),
+  lng: zod.number().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
  * @summary Delete a save
  */
 export const DeleteSaveParams = zod.object({

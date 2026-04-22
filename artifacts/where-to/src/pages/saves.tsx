@@ -7,11 +7,12 @@ import {
   useDeleteSave, 
   useScrapeUrl,
   useGeocodeSave,
+  useUpdateSave,
   getListSavesQueryKey 
 } from "@workspace/api-client-react";
 import type { Save } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, ImagePlus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,64 +24,230 @@ import { SavesMap } from "@/components/saves-map";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { parseDescription } from "@/lib/parse-description";
 
-function SaveDetailDialog({ save, open, onClose }: { save: Save | null; open: boolean; onClose: () => void }) {
+function SaveDetailDialog({
+  save,
+  open,
+  onClose,
+  onSaved,
+}: {
+  save: Save | null;
+  open: boolean;
+  onClose: () => void;
+  onSaved: (updated: Save) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [placeName, setPlaceName] = useState("");
+  const [imageError, setImageError] = useState(false);
+
+  const updateSave = useUpdateSave();
+  const scrapeUrl = useScrapeUrl();
+  const { toast } = useToast();
+
+  // Sync fields when save changes or edit mode opens
+  const startEdit = () => {
+    if (!save) return;
+    setTitle(save.scrapedTitle ?? "");
+    setDescription(parseDescription(save.scrapedDescription) ?? "");
+    setImageUrl(save.scrapedImage ?? "");
+    setPlaceName(save.placeName ?? "");
+    setImageError(false);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setImageError(false);
+  };
+
+  const handleSave = async () => {
+    if (!save) return;
+    try {
+      const updated = await updateSave.mutateAsync({
+        id: save.id,
+        data: {
+          scrapedTitle: title.trim() || null,
+          scrapedDescription: description.trim() || null,
+          scrapedImage: imageUrl.trim() || null,
+          placeName: placeName.trim() || null,
+        },
+      });
+      onSaved(updated);
+      setEditing(false);
+      toast({ title: "Changes saved" });
+    } catch {
+      toast({ title: "Failed to save changes", variant: "destructive" });
+    }
+  };
+
+  const handleFetchImage = async () => {
+    if (!save?.url) return;
+    try {
+      const result = await scrapeUrl.mutateAsync({ data: { url: save.url } });
+      if (result.image) {
+        setImageUrl(result.image);
+        setImageError(false);
+        toast({ title: "Image found" });
+      } else {
+        toast({ title: "No image found at this URL", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Couldn't fetch image", variant: "destructive" });
+    }
+  };
+
   if (!save) return null;
   const cleanedDescription = parseDescription(save.scrapedDescription);
+
   return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+    <Dialog open={open} onOpenChange={v => { if (!v) { onClose(); setEditing(false); } }}>
       <DialogContent className="max-w-lg p-0 overflow-hidden gap-0 max-h-[90dvh] flex flex-col">
-        {save.scrapedImage && (
+
+        {/* Image area */}
+        {editing ? (
+          <div className="flex-shrink-0 border-b border-border">
+            {imageUrl && !imageError ? (
+              <div className="relative h-40">
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+                <button
+                  className="absolute top-2 right-2 bg-background/80 rounded-full p-1 hover:bg-background"
+                  onClick={() => { setImageUrl(""); setImageError(false); }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="h-12 flex items-center px-4 gap-2">
+                <ImagePlus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Input
+                  placeholder="Image URL (paste or fetch below)"
+                  value={imageUrl}
+                  onChange={e => { setImageUrl(e.target.value); setImageError(false); }}
+                  className="flex-1 h-8 text-sm"
+                />
+                {save.url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1 flex-shrink-0"
+                    onClick={handleFetchImage}
+                    disabled={scrapeUrl.isPending}
+                  >
+                    {scrapeUrl.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    Fetch
+                  </Button>
+                )}
+              </div>
+            )}
+            {imageUrl && !imageError && (
+              <div className="px-4 pb-2 flex items-center gap-2">
+                <Input
+                  placeholder="Image URL"
+                  value={imageUrl}
+                  onChange={e => { setImageUrl(e.target.value); setImageError(false); }}
+                  className="flex-1 h-7 text-xs"
+                />
+                {save.url && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleFetchImage} disabled={scrapeUrl.isPending}>
+                    {scrapeUrl.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : save.scrapedImage ? (
           <div className="h-48 w-full overflow-hidden flex-shrink-0">
             <img src={save.scrapedImage} alt="" className="w-full h-full object-cover" />
           </div>
-        )}
+        ) : null}
+
+        {/* Scrollable body */}
         <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           <DialogHeader>
-            <DialogTitle className="font-serif text-xl leading-snug text-left">
-              {save.scrapedTitle || save.placeName || "Saved note"}
-            </DialogTitle>
+            <div className="flex items-start justify-between gap-2">
+              {editing ? (
+                <Input
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Title"
+                  className="font-serif text-lg flex-1"
+                />
+              ) : (
+                <DialogTitle className="font-serif text-xl leading-snug text-left flex-1">
+                  {save.scrapedTitle || save.placeName || "Saved note"}
+                </DialogTitle>
+              )}
+              {!editing && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-muted-foreground" onClick={startEdit}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
-          {cleanedDescription && (
+          {/* Description */}
+          {editing ? (
+            <Textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Description"
+              className="text-sm min-h-[100px] resize-none"
+            />
+          ) : cleanedDescription ? (
             <p className="text-sm text-muted-foreground leading-relaxed">{cleanedDescription}</p>
-          )}
+          ) : null}
 
-          {save.scrapedTitle && save.content !== save.url && (
+          {/* Note / content */}
+          {!editing && save.scrapedTitle && save.content !== save.url && (
             <div className="border-t border-border pt-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Your note</p>
               <p className="text-sm text-foreground whitespace-pre-wrap">{save.content}</p>
             </div>
           )}
-
-          {!save.scrapedTitle && (
+          {!editing && !save.scrapedTitle && (
             <div className="border-t border-border pt-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Note</p>
               <p className="text-sm text-foreground whitespace-pre-wrap">{save.content}</p>
             </div>
           )}
 
+          {/* Metadata footer */}
           <div className="border-t border-border pt-4 space-y-2 text-xs text-muted-foreground">
             {save.url && (
               <div className="flex items-start gap-2">
                 <Globe className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-primary" />
-                <a
-                  href={save.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary hover:underline break-all flex items-center gap-1"
-                >
+                <a href={save.url} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all flex items-center gap-1">
                   {save.url}
                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
                 </a>
               </div>
             )}
-            {save.placeName && (
-              <div className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+
+            {/* Place name */}
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+              {editing ? (
+                <Input
+                  value={placeName}
+                  onChange={e => setPlaceName(e.target.value)}
+                  placeholder="City, Country (will re-geocode on save)"
+                  className="h-7 text-xs flex-1"
+                />
+              ) : save.placeName ? (
                 <span className="text-foreground font-medium">{save.placeName}</span>
-              </div>
-            )}
-            {save.lat != null && save.lng != null && (
+              ) : (
+                <span className="italic opacity-50">No location — edit to add one</span>
+              )}
+            </div>
+
+            {save.lat != null && save.lng != null && !editing && (
               <div className="flex items-center gap-2">
                 <span className="w-3.5 text-center text-[10px]">📍</span>
                 <span className="font-mono">{save.lat.toFixed(4)}, {save.lng.toFixed(4)}</span>
@@ -92,6 +259,19 @@ function SaveDetailDialog({ save, open, onClose }: { save: Save | null; open: bo
             </div>
           </div>
         </div>
+
+        {/* Edit action bar */}
+        {editing && (
+          <div className="flex-shrink-0 border-t border-border px-6 py-3 flex justify-end gap-2 bg-card">
+            <Button variant="outline" size="sm" onClick={cancelEdit}>
+              <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={updateSave.isPending}>
+              {updateSave.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+              Save changes
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -486,6 +666,10 @@ export default function Saves() {
         save={detailSave}
         open={detailSave !== null}
         onClose={() => setDetailSave(null)}
+        onSaved={(updated) => {
+          setDetailSave(updated);
+          queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
+        }}
       />
     </div>
   );

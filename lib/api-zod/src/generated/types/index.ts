@@ -14,3 +14,4 @@ export * from "./healthStatus";
 export * from "./save";
 export * from "./scrapeResult";
 export * from "./scrapeUrlBody";
+export * from "./updateSaveBody";
