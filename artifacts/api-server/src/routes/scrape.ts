@@ -58,30 +58,37 @@ function buildRawDescription(parts: (string | null | undefined)[]): string {
 
   if (pieces.length === 0) return "";
 
-  // Join all pieces, deduplicate near-identical segments
   let combined = pieces.join("\n");
 
-  // Remove social engagement noise
-  combined = combined.replace(/\d[\d,]*\s+(?:likes?|views?|comments?|shares?|followers?|subscribers?)[^\n]*/gi, "");
-
-  // Remove Instagram/TikTok boilerplate ("username on Instagram: ...")
+  // Strip Instagram/TikTok/Facebook handle boilerplate from line starts
   combined = combined.replace(/^.+?\bon (?:Instagram|Facebook|TikTok):\s*/gim, "");
 
-  // Remove wrapping quotes
+  // Remove wrapping quotes left by extraction
   combined = combined.replace(/^["'"]+|["'"]+\.?$/g, "").trim();
 
-  // Deduplicate: if the same chunk of 60+ chars appears twice, keep only the first
+  // Collect social noise tokens (keep them for the footer) then remove from body
+  const noisePattern = /\d[\d,.]*[KkMmBb]?\s*(?:likes?|views?|comments?|shares?|followers?|subscribers?|reposts?|saves?|reactions?)(?:\s+\S+)*/gi;
+  const noiseMatches: string[] = [];
+  const cleanBody = combined.replace(noisePattern, (match) => {
+    noiseMatches.push(match.trim());
+    return "";
+  }).replace(/\s{2,}/g, " ").trim();
+
+  // Deduplicate lines in the clean body
   const seen = new Set<string>();
-  const lines = combined.split(/\n+/);
-  const deduped = lines.filter(line => {
+  const deduped = cleanBody.split(/\n+/).filter(line => {
     const key = line.slice(0, 60).toLowerCase().trim();
     if (key.length < 10) return true;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  });
+  }).join("\n").trim();
 
-  return deduped.join("\n").trim().slice(0, 800);
+  // Deduplicate noise tokens and append at end
+  const uniqueNoise = [...new Set(noiseMatches.map(n => n.replace(/\s+/g, " ")))];
+  const footer = uniqueNoise.length > 0 ? `\n\n— ${uniqueNoise.join(" · ")}` : "";
+
+  return (deduped + footer).slice(0, 900);
 }
 
 /** AI generates a short editorial title from the cleaned description */
@@ -149,8 +156,9 @@ async function scrapeUrl(url: string) {
     // Combine ALL scraped content into description, then clean
     const description = buildRawDescription([rawMetaDesc, bodyText]) || null;
 
-    // AI reads the cleaned description and generates the title
-    const aiTitle = await generateTitle(description ?? rawTitle ?? "", url);
+    // AI reads the clean body only (strip the noise footer before sending to AI)
+    const descriptionForTitle = description?.split("\n\n—")[0].trim() ?? rawTitle ?? "";
+    const aiTitle = await generateTitle(descriptionForTitle, url);
     const title = aiTitle ?? (rawTitle ? decodeEntities(rawTitle).trim() : null);
 
     return { url, title, description, image, siteName };
