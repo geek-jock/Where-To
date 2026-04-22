@@ -9,8 +9,9 @@ import {
   useGeocodeSave,
   getListSavesQueryKey 
 } from "@workspace/api-client-react";
+import type { Save } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +20,80 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SavesMap } from "@/components/saves-map";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+function SaveDetailDialog({ save, open, onClose }: { save: Save | null; open: boolean; onClose: () => void }) {
+  if (!save) return null;
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-lg p-0 overflow-hidden gap-0">
+        {save.scrapedImage && (
+          <div className="h-48 w-full overflow-hidden">
+            <img src={save.scrapedImage} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl leading-snug text-left">
+              {save.scrapedTitle || save.placeName || "Saved note"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {save.scrapedDescription && (
+            <p className="text-sm text-muted-foreground leading-relaxed">{save.scrapedDescription}</p>
+          )}
+
+          {save.scrapedTitle && save.content !== save.url && (
+            <div className="border-t border-border pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Your note</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{save.content}</p>
+            </div>
+          )}
+
+          {!save.scrapedTitle && (
+            <div className="border-t border-border pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Note</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{save.content}</p>
+            </div>
+          )}
+
+          <div className="border-t border-border pt-4 space-y-2 text-xs text-muted-foreground">
+            {save.url && (
+              <div className="flex items-start gap-2">
+                <Globe className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-primary" />
+                <a
+                  href={save.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline break-all flex items-center gap-1"
+                >
+                  {save.url}
+                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                </a>
+              </div>
+            )}
+            {save.placeName && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span className="text-foreground font-medium">{save.placeName}</span>
+              </div>
+            )}
+            {save.lat != null && save.lng != null && (
+              <div className="flex items-center gap-2">
+                <span className="w-3.5 text-center text-[10px]">📍</span>
+                <span className="font-mono">{save.lat.toFixed(4)}, {save.lng.toFixed(4)}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="w-3.5 text-center text-[10px]">📅</span>
+              <span>{format(new Date(save.createdAt), "MMMM d, yyyy 'at' h:mm a")}</span>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Saves() {
   const { data: saves = [], isLoading } = useListSaves();
@@ -42,6 +117,7 @@ export default function Saves() {
 
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [selectedSaveIds, setSelectedSaveIds] = useState<number[]>([]);
+  const [detailSave, setDetailSave] = useState<Save | null>(null);
 
   const toggleSelect = (id: number) => {
     setSelectedSaveIds(prev =>
@@ -360,15 +436,26 @@ export default function Saves() {
                         )}
                         {format(new Date(save.createdAt), "MMM d, yyyy")}
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(save.id); }}
-                        data-testid={`button-delete-save-${save.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); setDetailSave(save); }}
+                          title="View full details"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(save.id); }}
+                          data-testid={`button-delete-save-${save.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardFooter>
                   </Card>
                 );
@@ -392,6 +479,12 @@ export default function Saves() {
           </div>
         )}
       </div>
+
+      <SaveDetailDialog
+        save={detailSave}
+        open={detailSave !== null}
+        onClose={() => setDetailSave(null)}
+      />
     </div>
   );
 }
