@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
 
@@ -27,7 +28,6 @@ function parseDescription(raw: string | null): string | null {
   let text = decodeEntities(raw);
 
   // Instagram: "[Page] on Instagram: "caption" N likes, N comments - user on date: "caption""
-  // Extract just the first caption, drop the duplicated tail
   const igMatch = text.match(/^.+?\bon Instagram:\s*"([\s\S]+?)"\s*(?:\d[\d,]*\s+like|\.|$)/i);
   if (igMatch) return igMatch[1].trim();
 
@@ -42,11 +42,10 @@ function parseDescription(raw: string | null): string | null {
   // YouTube: strip "N views" / "N watching" style suffix lines
   text = text.replace(/\s*\d[\d,]*\s+(?:views?|watching|subscribers?)[^\n]*/gi, "").trim();
 
-  // Strip trailing social engagement metadata: "N likes, N comments - username on date: ..."
+  // Strip trailing social engagement metadata
   text = text.replace(/\s*\d[\d,]*\s+likes?,\s*\d+\s+comments?[\s\S]*$/i, "").trim();
 
-  // Deduplicate: if the string contains a long repeated block, keep only the first occurrence
-  // Matches platform patterns where description is echoed after engagement stats
+  // Deduplicate repeated blocks
   if (text.length > 120) {
     const half = Math.ceil(text.length * 0.48);
     const firstChunk = text.slice(0, half).trim();
@@ -55,10 +54,41 @@ function parseDescription(raw: string | null): string | null {
     }
   }
 
-  // Remove wrapping quotes left over from extraction
+  // Remove wrapping quotes
   text = text.replace(/^["'"]+|["'"]+\.?$/g, "").trim();
 
   return text || null;
+}
+
+async function generateTitle(description: string, rawTitle: string | null, url: string): Promise<string | null> {
+  try {
+    const context = [
+      description ? `Description: ${description.slice(0, 400)}` : null,
+      rawTitle ? `Raw page title: ${rawTitle}` : null,
+      `Source URL: ${url}`,
+    ].filter(Boolean).join("\n");
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You create concise, editorial titles for saved travel places. 
+Given scraped content from a URL, return ONLY a short title (3–8 words) that names the place or experience clearly and evocatively. 
+No quotes, no trailing punctuation. No generic titles like "Instagram post" or "Video". 
+If it's a specific place, name it. If it's a vibe/experience, capture it briefly.`,
+        },
+        { role: "user", content: context },
+      ],
+      max_tokens: 40,
+      temperature: 0.4,
+    });
+
+    const title = completion.choices[0]?.message?.content?.trim() ?? null;
+    return title || null;
+  } catch {
+    return null;
+  }
 }
 
 async function scrapeUrl(url: string) {
@@ -93,13 +123,17 @@ async function scrapeUrl(url: string) {
     const image = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i)?.[1] || null;
     const siteName = html.match(/<meta\s+property="og:site_name"\s+content="([^"]+)"/i)?.[1] || null;
 
-    return {
-      url,
-      title: rawTitle ? decodeEntities(rawTitle).trim() : null,
-      description: parseDescription(rawDescription),
-      image,
-      siteName,
-    };
+    // Description = the parsed scraped content (cleaned)
+    const description = parseDescription(rawDescription);
+
+    // Title = AI-generated from the description (falls back to raw title if AI fails)
+    const aiTitle = description || rawTitle
+      ? await generateTitle(description ?? "", rawTitle ? decodeEntities(rawTitle).trim() : null, url)
+      : null;
+
+    const title = aiTitle ?? (rawTitle ? decodeEntities(rawTitle).trim() : null);
+
+    return { url, title, description, image, siteName };
   } catch {
     return { url, title: null, description: null, image: null, siteName: null };
   }
