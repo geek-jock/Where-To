@@ -6,4 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./createDecisionBody";
+export * from "./createSaveBody";
+export * from "./decision";
+export * from "./deleteResult";
 export * from "./healthStatus";
+export * from "./save";
+export * from "./scrapeResult";
+export * from "./scrapeUrlBody";

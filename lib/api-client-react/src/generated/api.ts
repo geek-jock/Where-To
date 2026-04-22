@@ -5,18 +5,30 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CreateDecisionBody,
+  CreateSaveBody,
+  Decision,
+  DeleteResult,
+  HealthStatus,
+  Save,
+  ScrapeResult,
+  ScrapeUrlBody,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +111,656 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all saves for the current user
+ */
+export const getListSavesUrl = () => {
+  return `/api/saves`;
+};
+
+export const listSaves = async (options?: RequestInit): Promise<Save[]> => {
+  return customFetch<Save[]>(getListSavesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSavesQueryKey = () => {
+  return [`/api/saves`] as const;
+};
+
+export const getListSavesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSaves>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listSaves>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSavesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSaves>>> = ({
+    signal,
+  }) => listSaves({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSaves>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListSavesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSaves>>
+>;
+export type ListSavesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all saves for the current user
+ */
+
+export function useListSaves<
+  TData = Awaited<ReturnType<typeof listSaves>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listSaves>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSavesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a new travel save
+ */
+export const getCreateSaveUrl = () => {
+  return `/api/saves`;
+};
+
+export const createSave = async (
+  createSaveBody: CreateSaveBody,
+  options?: RequestInit,
+): Promise<Save> => {
+  return customFetch<Save>(getCreateSaveUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createSaveBody),
+  });
+};
+
+export const getCreateSaveMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSave>>,
+    TError,
+    { data: BodyType<CreateSaveBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSave>>,
+  TError,
+  { data: BodyType<CreateSaveBody> },
+  TContext
+> => {
+  const mutationKey = ["createSave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSave>>,
+    { data: BodyType<CreateSaveBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSave(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSave>>
+>;
+export type CreateSaveMutationBody = BodyType<CreateSaveBody>;
+export type CreateSaveMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a new travel save
+ */
+export const useCreateSave = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSave>>,
+    TError,
+    { data: BodyType<CreateSaveBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createSave>>,
+  TError,
+  { data: BodyType<CreateSaveBody> },
+  TContext
+> => {
+  return useMutation(getCreateSaveMutationOptions(options));
+};
+
+/**
+ * @summary Delete a save
+ */
+export const getDeleteSaveUrl = (id: number) => {
+  return `/api/saves/${id}`;
+};
+
+export const deleteSave = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeleteResult> => {
+  return customFetch<DeleteResult>(getDeleteSaveUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteSaveMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSave>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteSave>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteSave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteSave>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteSave(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteSaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteSave>>
+>;
+
+export type DeleteSaveMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a save
+ */
+export const useDeleteSave = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSave>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteSave>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteSaveMutationOptions(options));
+};
+
+/**
+ * @summary List all decisions for the current user
+ */
+export const getListDecisionsUrl = () => {
+  return `/api/decisions`;
+};
+
+export const listDecisions = async (
+  options?: RequestInit,
+): Promise<Decision[]> => {
+  return customFetch<Decision[]>(getListDecisionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDecisionsQueryKey = () => {
+  return [`/api/decisions`] as const;
+};
+
+export const getListDecisionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDecisions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDecisions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDecisionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDecisions>>> = ({
+    signal,
+  }) => listDecisions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDecisions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDecisionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDecisions>>
+>;
+export type ListDecisionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all decisions for the current user
+ */
+
+export function useListDecisions<
+  TData = Awaited<ReturnType<typeof listDecisions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDecisions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDecisionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Generate a travel decision from saves and a question
+ */
+export const getCreateDecisionUrl = () => {
+  return `/api/decisions`;
+};
+
+export const createDecision = async (
+  createDecisionBody: CreateDecisionBody,
+  options?: RequestInit,
+): Promise<Decision> => {
+  return customFetch<Decision>(getCreateDecisionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDecisionBody),
+  });
+};
+
+export const getCreateDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDecision>>,
+    TError,
+    { data: BodyType<CreateDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDecision>>,
+  TError,
+  { data: BodyType<CreateDecisionBody> },
+  TContext
+> => {
+  const mutationKey = ["createDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDecision>>,
+    { data: BodyType<CreateDecisionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDecision(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDecision>>
+>;
+export type CreateDecisionMutationBody = BodyType<CreateDecisionBody>;
+export type CreateDecisionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate a travel decision from saves and a question
+ */
+export const useCreateDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDecision>>,
+    TError,
+    { data: BodyType<CreateDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDecision>>,
+  TError,
+  { data: BodyType<CreateDecisionBody> },
+  TContext
+> => {
+  return useMutation(getCreateDecisionMutationOptions(options));
+};
+
+/**
+ * @summary Get a single decision
+ */
+export const getGetDecisionUrl = (id: number) => {
+  return `/api/decisions/${id}`;
+};
+
+export const getDecision = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Decision> => {
+  return customFetch<Decision>(getGetDecisionUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDecisionQueryKey = (id: number) => {
+  return [`/api/decisions/${id}`] as const;
+};
+
+export const getGetDecisionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDecision>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDecision>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDecisionQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDecision>>> = ({
+    signal,
+  }) => getDecision(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDecision>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDecisionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDecision>>
+>;
+export type GetDecisionQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a single decision
+ */
+
+export function useGetDecision<
+  TData = Awaited<ReturnType<typeof getDecision>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDecision>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDecisionQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete a decision
+ */
+export const getDeleteDecisionUrl = (id: number) => {
+  return `/api/decisions/${id}`;
+};
+
+export const deleteDecision = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeleteResult> => {
+  return customFetch<DeleteResult>(getDeleteDecisionUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDecision>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDecision>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDecision>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteDecision(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDecision>>
+>;
+
+export type DeleteDecisionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a decision
+ */
+export const useDeleteDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDecision>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDecision>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteDecisionMutationOptions(options));
+};
+
+/**
+ * @summary Scrape metadata from a URL
+ */
+export const getScrapeUrlUrl = () => {
+  return `/api/scrape`;
+};
+
+export const scrapeUrl = async (
+  scrapeUrlBody: ScrapeUrlBody,
+  options?: RequestInit,
+): Promise<ScrapeResult> => {
+  return customFetch<ScrapeResult>(getScrapeUrlUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(scrapeUrlBody),
+  });
+};
+
+export const getScrapeUrlMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrapeUrl>>,
+    TError,
+    { data: BodyType<ScrapeUrlBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scrapeUrl>>,
+  TError,
+  { data: BodyType<ScrapeUrlBody> },
+  TContext
+> => {
+  const mutationKey = ["scrapeUrl"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scrapeUrl>>,
+    { data: BodyType<ScrapeUrlBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return scrapeUrl(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScrapeUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scrapeUrl>>
+>;
+export type ScrapeUrlMutationBody = BodyType<ScrapeUrlBody>;
+export type ScrapeUrlMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Scrape metadata from a URL
+ */
+export const useScrapeUrl = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrapeUrl>>,
+    TError,
+    { data: BodyType<ScrapeUrlBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof scrapeUrl>>,
+  TError,
+  { data: BodyType<ScrapeUrlBody> },
+  TContext
+> => {
+  return useMutation(getScrapeUrlMutationOptions(options));
+};

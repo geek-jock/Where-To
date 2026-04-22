@@ -8,3 +8,53 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface Save {
+  id: number;
+  userId: string;
+  content: string;
+  url?: string | null;
+  scrapedTitle?: string | null;
+  scrapedDescription?: string | null;
+  scrapedImage?: string | null;
+  createdAt: string;
+}
+
+export interface CreateSaveBody {
+  content: string;
+  url?: string | null;
+  scrapedTitle?: string | null;
+  scrapedDescription?: string | null;
+  scrapedImage?: string | null;
+}
+
+export interface Decision {
+  id: number;
+  userId: string;
+  question: string;
+  result: string;
+  savesSnapshot: string;
+  createdAt: string;
+}
+
+export interface CreateDecisionBody {
+  question: string;
+  saveIds: number[];
+}
+
+export interface DeleteResult {
+  success: boolean;
+}
+
+export interface ScrapeUrlBody {
+  url: string;
+}
+
+export interface ScrapeResult {
+  url: string;
+  title?: string | null;
+  description?: string | null;
+  image?: string | null;
+  siteName?: string | null;
+  extractedText?: string | null;
+}

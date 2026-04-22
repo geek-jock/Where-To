@@ -14,3 +14,104 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary List all saves for the current user
+ */
+export const ListSavesResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  content: zod.string(),
+  url: zod.string().nullish(),
+  scrapedTitle: zod.string().nullish(),
+  scrapedDescription: zod.string().nullish(),
+  scrapedImage: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListSavesResponse = zod.array(ListSavesResponseItem);
+
+/**
+ * @summary Add a new travel save
+ */
+export const CreateSaveBody = zod.object({
+  content: zod.string(),
+  url: zod.string().nullish(),
+  scrapedTitle: zod.string().nullish(),
+  scrapedDescription: zod.string().nullish(),
+  scrapedImage: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a save
+ */
+export const DeleteSaveParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteSaveResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary List all decisions for the current user
+ */
+export const ListDecisionsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  question: zod.string(),
+  result: zod.string(),
+  savesSnapshot: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListDecisionsResponse = zod.array(ListDecisionsResponseItem);
+
+/**
+ * @summary Generate a travel decision from saves and a question
+ */
+export const CreateDecisionBody = zod.object({
+  question: zod.string(),
+  saveIds: zod.array(zod.number()),
+});
+
+/**
+ * @summary Get a single decision
+ */
+export const GetDecisionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetDecisionResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  question: zod.string(),
+  result: zod.string(),
+  savesSnapshot: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a decision
+ */
+export const DeleteDecisionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteDecisionResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Scrape metadata from a URL
+ */
+export const ScrapeUrlBody = zod.object({
+  url: zod.string(),
+});
+
+export const ScrapeUrlResponse = zod.object({
+  url: zod.string(),
+  title: zod.string().nullish(),
+  description: zod.string().nullish(),
+  image: zod.string().nullish(),
+  siteName: zod.string().nullish(),
+  extractedText: zod.string().nullish(),
+});
