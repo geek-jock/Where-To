@@ -5,6 +5,11 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Save } from "@workspace/api-client-react";
 
+interface MarkerClusterLike {
+  getAllChildMarkers(): L.Marker[];
+  getChildCount(): number;
+}
+
 function toFlag(code: string): string {
   return Array.from(code.toUpperCase())
     .map(l => String.fromCodePoint(l.charCodeAt(0) - 65 + 0x1F1E6))
@@ -47,8 +52,7 @@ export function SavesMap({ saves, selectedIds, onToggle }: SavesMapProps) {
 
   const geocodedSaves = saves.filter(s => s.lat != null && s.lng != null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createClusterIcon = (cluster: any): L.DivIcon => {
+  const createClusterIcon = (cluster: MarkerClusterLike): L.DivIcon => {
     const markers = cluster.getAllChildMarkers() as L.Marker[];
     const savesInCluster = markers
       .map(m => markerSaveMap.current.get(m))

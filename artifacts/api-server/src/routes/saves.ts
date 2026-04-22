@@ -84,7 +84,7 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
       const [updated] = await db
         .update(savesTable)
         .set({ placeName: null, lat: null, lng: null })
-        .where(eq(savesTable.id, id))
+        .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
         .returning();
       return res.json(updated);
     }
@@ -108,7 +108,7 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
         lat,
         lng,
       })
-      .where(eq(savesTable.id, id))
+      .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
       .returning();
 
     res.json(updated);
