@@ -86,7 +86,7 @@ export function SavesMap({ saves, selectedIds, onToggle }: SavesMapProps) {
 
   if (geocodedSaves.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[420px] border border-dashed border-border text-muted-foreground text-sm gap-2">
+      <div className="flex flex-col items-center justify-center h-[55vw] min-h-[260px] max-h-[420px] border border-dashed border-border text-muted-foreground text-sm gap-2">
         <span className="text-2xl opacity-30">🗺️</span>
         <p>No saves with location data yet.</p>
         <p className="text-xs opacity-70">Saved places will appear here once they're geocoded.</p>
@@ -102,7 +102,7 @@ export function SavesMap({ saves, selectedIds, onToggle }: SavesMapProps) {
       <MapContainer
         center={[centerLat, centerLng]}
         zoom={3}
-        style={{ height: "420px", width: "100%" }}
+        style={{ height: "min(420px, 55vw + 60px)", minHeight: "260px", width: "100%" }}
         scrollWheelZoom
       >
         <TileLayer

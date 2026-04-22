@@ -216,30 +216,30 @@ export default function Saves() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-serif font-semibold">Your library</h2>
-          <div className="flex items-center border border-border rounded-none overflow-hidden">
+          <div className="flex items-center border border-border overflow-hidden">
             <button
               onClick={() => setViewMode("list")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm min-h-[40px] transition-colors ${
                 viewMode === "list"
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:bg-muted/50"
               }`}
               aria-label="List view"
             >
-              <List className="h-3.5 w-3.5" />
-              List
+              <List className="h-4 w-4" />
+              <span className="hidden sm:inline">List</span>
             </button>
             <button
               onClick={() => setViewMode("map")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border-l border-border transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm min-h-[40px] border-l border-border transition-colors ${
                 viewMode === "map"
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:bg-muted/50"
               }`}
               aria-label="Map view"
             >
-              <Map className="h-3.5 w-3.5" />
-              Map
+              <Map className="h-4 w-4" />
+              <span className="hidden sm:inline">Map</span>
             </button>
           </div>
         </div>
@@ -376,10 +376,13 @@ export default function Saves() {
             </div>
 
             {selectedSaveIds.length > 0 && (
-              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
+              <div
+                className="fixed left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300"
+                style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4rem)" }}
+              >
                 <button
                   onClick={handleGoDecide}
-                  className="flex items-center gap-2 px-6 py-3 bg-foreground text-background text-sm font-medium shadow-xl hover:opacity-90 transition-opacity"
+                  className="flex items-center gap-2 px-6 py-3 bg-foreground text-background text-sm font-medium shadow-xl hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
                   <Sparkles className="h-4 w-4" />
                   Decide with {selectedSaveIds.length} {selectedSaveIds.length === 1 ? "place" : "places"}

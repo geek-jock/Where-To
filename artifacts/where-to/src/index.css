@@ -215,14 +215,21 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    -webkit-text-size-adjust: 100%;
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif tracking-tight text-foreground;
+  }
+
+  /* Prevent iOS auto-zoom on input focus */
+  input, textarea, select {
+    font-size: max(16px, 1em);
   }
 }
 
