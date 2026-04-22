@@ -1,15 +1,16 @@
 /**
- * One-time backfill: re-runs the scrape pipeline on all seeded saves that have URLs.
- * Updates scrapedTitle and scrapedDescription with the new cleaned content + AI titles.
+ * Smarter backfill:
+ * - Saves with rich descriptions (from real scrape) → clean + AI title
+ * - Saves with garbage descriptions (blocked sites) → AI generates both
  *
- * Run: pnpm --filter @workspace/api-server tsx src/scripts/backfill-scrape.ts
+ * Run: cd artifacts/api-server && node_modules/.bin/esbuild src/scripts/backfill-scrape.ts --bundle --platform=node --format=cjs --outfile=/tmp/backfill.cjs && node /tmp/backfill.cjs
  */
 
 import { db, savesTable } from "@workspace/db";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { isNotNull, eq } from "drizzle-orm";
 
-// ── Scrape helpers (mirrors routes/scrape.ts) ────────────────────────────────
+// ── Noise-moving pipeline ────────────────────────────────────────────────────
 
 function decodeEntities(text: string): string {
   return text
@@ -19,35 +20,14 @@ function decodeEntities(text: string): string {
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)));
 }
 
-function extractBodyText(html: string): string {
-  const stripped = html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<nav[\s\S]*?<\/nav>/gi, "")
-    .replace(/<header[\s\S]*?<\/header>/gi, "")
-    .replace(/<footer[\s\S]*?<\/footer>/gi, "");
-
-  const pMatches = [...stripped.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
-  if (pMatches.length > 0) {
-    const paragraphs = pMatches
-      .map(m => m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim())
-      .filter(p => p.length > 30);
-    if (paragraphs.length > 0) return paragraphs.slice(0, 5).join(" ").slice(0, 600);
-  }
-  return stripped.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 600);
-}
-
-function buildRawDescription(parts: (string | null | undefined)[]): string {
-  const pieces = parts.filter(Boolean).map(p => decodeEntities(p!).trim()).filter(p => p.length > 0);
-  if (pieces.length === 0) return "";
-
-  let combined = pieces.join("\n");
-  combined = combined.replace(/^.+?\bon (?:Instagram|Facebook|TikTok):\s*/gim, "");
-  combined = combined.replace(/^["'"]+|["'"]+\.?$/g, "").trim();
+function cleanAndOrganizeDescription(raw: string): string {
+  let text = decodeEntities(raw).trim();
+  text = text.replace(/^.+?\bon (?:Instagram|Facebook|TikTok):\s*/gim, "");
+  text = text.replace(/^["'"]+|["'"]+\.?$/g, "").trim();
 
   const noisePattern = /\d[\d,.]*[KkMmBb]?\s*(?:likes?|views?|comments?|shares?|followers?|subscribers?|reposts?|saves?|reactions?)(?:\s+\S+)*/gi;
   const noiseMatches: string[] = [];
-  const cleanBody = combined.replace(noisePattern, (match) => {
+  const cleanBody = text.replace(noisePattern, match => {
     noiseMatches.push(match.trim());
     return "";
   }).replace(/\s{2,}/g, " ").trim();
@@ -66,18 +46,18 @@ function buildRawDescription(parts: (string | null | undefined)[]): string {
   return (deduped + footer).slice(0, 900);
 }
 
-async function generateTitle(description: string, url: string): Promise<string | null> {
-  if (!description.trim()) return null;
+// ── AI helpers ───────────────────────────────────────────────────────────────
+
+async function generateTitle(context: string): Promise<string | null> {
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You name travel saves. Given the description of a place or travel experience, return ONLY a title: 3–7 words, specific, editorial, no quotes, no punctuation at the end.
-Name the actual place if identifiable (e.g. "Amalfi Coast Cliffside Hotel"). If it's an experience, name the vibe (e.g. "Quiet Ryokan in Kyoto Mountains"). Never use generic titles like "Instagram Post" or "Travel Video".`,
+          content: `Return ONLY a travel save title: 3–7 words, specific, editorial, no quotes, no trailing punctuation. Name the actual place if identifiable. Never use generic titles like "Instagram Post" or "Travel Video".`,
         },
-        { role: "user", content: `URL: ${url}\n\nDescription:\n${description.slice(0, 500)}` },
+        { role: "user", content: context.slice(0, 500) },
       ],
       max_tokens: 30,
       temperature: 0.35,
@@ -88,54 +68,120 @@ Name the actual place if identifiable (e.g. "Amalfi Coast Cliffside Hotel"). If 
   }
 }
 
-async function scrapeOne(url: string): Promise<{ title: string | null; description: string | null }> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 9000);
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; WhereTo/1.0)", "Accept": "text/html,application/xhtml+xml" },
-    });
-    clearTimeout(timeout);
-    if (!response.ok) return { title: null, description: null };
+async function generateDescriptionAndTitle(
+  placeName: string,
+  tags: string[],
+  category: string,
+  url: string,
+): Promise<{ title: string; description: string }> {
+  const tagStr = tags.join(", ");
+  const prompt = `Place: ${placeName}
+Category: ${category}
+Vibes: ${tagStr}
+Source URL: ${url}`;
 
-    const html = await response.text();
-    const rawTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i)?.[1]
-      || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || null;
-    const rawMetaDesc = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i)?.[1]
-      || html.match(/<meta\s+name="description"\s+content="([^"]+)"/i)?.[1] || null;
-    const bodyText = extractBodyText(html);
-    const description = buildRawDescription([rawMetaDesc, bodyText]) || null;
-    const cleanForTitle = description?.split("\n\n—")[0].trim() ?? rawTitle ?? "";
-    const aiTitle = await generateTitle(cleanForTitle, url);
-    const title = aiTitle ?? (rawTitle ? decodeEntities(rawTitle).trim() : null);
-    return { title, description };
-  } catch (e) {
-    console.error(`  ✗ fetch failed: ${e}`);
-    return { title: null, description: null };
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You write concise, evocative travel save descriptions. Given a place name, category, and vibes, return a JSON object:
+{
+  "title": "3–7 word editorial title naming the specific place",
+  "description": "2–3 sentence vivid description of what makes this place worth saving. Practical + poetic. Under 200 characters."
+}
+Reply ONLY with valid JSON.`,
+      },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: 150,
+    temperature: 0.5,
+  });
+
+  const raw = completion.choices[0]?.message?.content?.trim() ?? "{}";
+  const parsed = JSON.parse(raw.replace(/^```json\s*|```\s*$/g, "").trim());
+  return {
+    title: typeof parsed.title === "string" ? parsed.title : placeName,
+    description: typeof parsed.description === "string" ? parsed.description : "",
+  };
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const GARBAGE_DESCRIPTIONS = new Set([
+  "instagram", "tiktok - make your day", "tiktok", "facebook",
+  "youtube", "enjoy the videos and music you love",
+  "airbnb", "404 page not found",
+]);
+
+function isGarbage(desc: string | null): boolean {
+  if (!desc || desc.trim().length < 15) return true;
+  const lower = desc.toLowerCase().trim();
+  for (const g of GARBAGE_DESCRIPTIONS) {
+    if (lower.startsWith(g)) return true;
   }
+  return false;
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-const saves = await db.select().from(savesTable).where(isNotNull(savesTable.url));
-console.log(`\nBackfilling ${saves.length} saves with URLs...\n`);
+async function main() {
+  const saves = await db.select().from(savesTable).where(isNotNull(savesTable.url));
+  console.log(`\nBackfilling ${saves.length} saves with URLs...\n`);
 
-for (const save of saves) {
-  console.log(`[${save.id}] ${save.url}`);
-  const { title, description } = await scrapeOne(save.url!);
-  console.log(`  title: ${title ?? "(null)"}`);
-  console.log(`  desc:  ${(description ?? "").slice(0, 80)}${description && description.length > 80 ? "…" : ""}`);
+  for (const save of saves) {
+    console.log(`[${save.id}] ${save.placeName ?? save.url}`);
 
-  await db.update(savesTable).set({
-    scrapedTitle: title ?? save.scrapedTitle,
-    scrapedDescription: description ?? save.scrapedDescription,
-  }).where(eq(savesTable.id, save.id));
+    const tags: string[] = (() => {
+      try { return JSON.parse(save.tags ?? "[]") as string[]; } catch { return []; }
+    })();
 
-  console.log(`  ✓ updated\n`);
-  // Small delay to avoid hammering external sites
-  await new Promise(r => setTimeout(r, 400));
+    let newTitle: string | null = null;
+    let newDescription: string | null = null;
+
+    if (isGarbage(save.scrapedDescription)) {
+      // Generate both from place context
+      console.log(`  → generating from place context (${save.placeName})`);
+      try {
+        const result = await generateDescriptionAndTitle(
+          save.placeName ?? save.url ?? "",
+          tags,
+          save.category ?? "place",
+          save.url ?? "",
+        );
+        newTitle = result.title;
+        newDescription = result.description;
+      } catch (e) {
+        console.error(`  ✗ AI failed: ${e}`);
+      }
+    } else {
+      // Clean existing rich description, move noise to end
+      console.log(`  → cleaning existing description`);
+      newDescription = save.scrapedDescription
+        ? cleanAndOrganizeDescription(save.scrapedDescription)
+        : null;
+
+      // Generate AI title from clean body
+      const cleanForTitle = newDescription?.split("\n\n—")[0].trim() ?? save.placeName ?? "";
+      newTitle = await generateTitle(
+        `Place: ${save.placeName}\n\n${cleanForTitle}`,
+      );
+    }
+
+    console.log(`  title: ${newTitle ?? "(unchanged)"}`);
+    console.log(`  desc:  ${(newDescription ?? "").slice(0, 90)}…`);
+
+    await db.update(savesTable).set({
+      scrapedTitle: newTitle ?? save.scrapedTitle,
+      scrapedDescription: newDescription ?? save.scrapedDescription,
+    }).where(eq(savesTable.id, save.id));
+
+    console.log(`  ✓ done\n`);
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  console.log("All done.");
+  process.exit(0);
 }
 
-console.log("Done.");
-process.exit(0);
+main().catch(e => { console.error(e); process.exit(1); });
