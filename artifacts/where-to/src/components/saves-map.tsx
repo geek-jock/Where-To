@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -152,12 +152,81 @@ function MarkerPin({ save, index, selected, onToggle, markerSaveMap }: MarkerPin
     };
   }, []);
 
+  const title = save.scrapedTitle || save.content.slice(0, 60) + (save.content.length > 60 ? "…" : "");
+
   return (
     <Marker
       ref={markerRef}
       position={[save.lat!, save.lng!]}
       icon={numberedMarkerIcon(index, selected)}
-      eventHandlers={{ click: () => onToggle(save.id) }}
-    />
+    >
+      <Popup
+        closeButton={false}
+        className="saves-map-popup"
+        minWidth={220}
+        maxWidth={280}
+      >
+        <div style={{
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          background: "#f5f5f0",
+          borderRadius: "8px",
+          overflow: "hidden",
+          margin: "-13px -19px",
+        }}>
+          {save.scrapedImage && (
+            <img
+              src={save.scrapedImage}
+              alt=""
+              style={{
+                width: "100%",
+                height: "110px",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          )}
+          <div style={{ padding: "12px 14px 10px" }}>
+            <p style={{
+              margin: "0 0 3px",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "#3d3d34",
+              lineHeight: 1.3,
+            }}>
+              {title}
+            </p>
+            {save.placeName && (
+              <p style={{
+                margin: "0 0 10px",
+                fontSize: "11px",
+                color: "#7a7a6a",
+                lineHeight: 1.4,
+              }}>
+                {save.placeName}
+              </p>
+            )}
+            <button
+              onClick={() => onToggle(save.id)}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "6px 10px",
+                borderRadius: "5px",
+                border: selected ? "1.5px solid #6b7c46" : "1.5px solid #3d3d34",
+                background: selected ? "#6b7c46" : "#3d3d34",
+                color: "#f5f5f0",
+                fontSize: "12px",
+                fontWeight: 600,
+                cursor: "pointer",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {selected ? "Deselect" : "Select"}
+            </button>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
   );
 }
