@@ -1,13 +1,20 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
-import { Compass, Bookmark, CheckCircle, History, LogOut } from "lucide-react";
+import { Compass, Bookmark, CheckCircle, History, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("sidebar-collapsed", String(collapsed)); } catch { /* ignore */ }
+  }, [collapsed]);
 
   const navigation = [
     { name: "Saves", href: "/saves", icon: Bookmark },
@@ -18,7 +25,7 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
 
-      {/* Mobile top bar — minimal, no hamburger */}
+      {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-card">
         <Link href="/saves" className="flex items-center gap-2">
           <Compass className="h-5 w-5 text-primary" />
@@ -37,62 +44,98 @@ export function Layout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden md:flex w-64 flex-col border-r border-border bg-card fixed inset-y-0 left-0">
-        <div className="p-6">
+      <div
+        className={`hidden md:flex flex-col border-r border-border bg-card fixed inset-y-0 left-0 transition-all duration-200 ${
+          collapsed ? "w-16" : "w-64"
+        }`}
+      >
+        {/* Logo */}
+        <div className={`flex items-center gap-2 p-4 h-[72px] ${collapsed ? "justify-center" : "px-6"}`}>
           <Link href="/saves" className="flex items-center gap-2">
-            <Compass className="h-6 w-6 text-primary" />
-            <span className="font-serif font-bold text-xl">Where To</span>
+            <Compass className="h-6 w-6 text-primary flex-shrink-0" />
+            {!collapsed && <span className="font-serif font-bold text-xl">Where To</span>}
           </Link>
         </div>
-        <nav className="flex flex-col gap-2 px-4 flex-1">
+
+        {/* Nav items */}
+        <nav className="flex flex-col gap-1 px-2 flex-1">
           {navigation.map((item) => {
             const isActive = location === item.href;
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
+                  collapsed ? "justify-center" : ""
+                } ${
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 }`}
+                title={collapsed ? item.name : undefined}
                 data-testid={`link-desktop-${item.name.toLowerCase()}`}
               >
-                <item.icon className="h-4 w-4" />
-                <span className="font-medium">{item.name}</span>
+                <item.icon className="h-4 w-4 flex-shrink-0" />
+                {!collapsed && <span className="font-medium">{item.name}</span>}
               </Link>
             );
           })}
         </nav>
-        <div className="p-4 border-t border-border mt-auto">
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+
+        {/* User + sign out */}
+        {!collapsed && (
+          <div className="px-4 pt-4 border-t border-border">
+            <div className="flex items-center gap-3 px-3 py-2 mb-1">
+              <img
+                src={user?.imageUrl}
+                alt={user?.fullName || "User"}
+                className="h-8 w-8 rounded-full flex-shrink-0"
+                data-testid="img-avatar"
+              />
+              <div className="flex flex-col overflow-hidden min-w-0">
+                <span className="text-sm font-medium truncate" data-testid="text-username">
+                  {user?.firstName}
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-muted-foreground hover:text-foreground mb-2"
+              onClick={() => signOut()}
+              data-testid="button-sign-out"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        )}
+
+        {collapsed && (
+          <div className="pb-4 flex flex-col items-center gap-2 border-t border-border pt-3">
             <img
               src={user?.imageUrl}
               alt={user?.fullName || "User"}
-              className="h-8 w-8 rounded-full"
+              className="h-7 w-7 rounded-full"
               data-testid="img-avatar"
             />
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-medium truncate" data-testid="text-username">
-                {user?.firstName}
-              </span>
-            </div>
           </div>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => signOut()}
-            data-testid="button-sign-out"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
+        )}
+
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          className={`flex items-center justify-center h-10 border-t border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors ${
+            collapsed ? "w-full" : "w-full"
+          }`}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </button>
       </div>
 
-      {/* Main content — extra bottom padding on mobile for the tab bar */}
-      <div className="flex-1 md:pl-64 flex flex-col min-h-[100dvh]">
-        <main className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-8">
+      {/* Main content */}
+      <div className={`flex-1 flex flex-col min-h-[100dvh] transition-all duration-200 ${collapsed ? "md:pl-16" : "md:pl-64"}`}>
+        <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-8">
           {children}
         </main>
       </div>

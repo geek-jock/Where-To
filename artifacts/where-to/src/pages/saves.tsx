@@ -599,64 +599,66 @@ export default function Saves() {
             <p>Your library is empty. Save some links or ideas to get started.</p>
           </div>
         ) : viewMode === "map" ? (
-          <div className="space-y-0">
-            <SavesMap
-              saves={saves}
-              selectedIds={selectedSaveIds}
-              onToggle={toggleSelect}
-              activeSave={activePinSave}
-              onPinClick={(save) => setActivePinSave(prev => prev?.id === save.id ? null : save)}
-            />
+          /* ── Side-by-side map layout ── */
+          <div className="border border-border overflow-hidden flex flex-col md:flex-row" style={{ height: "clamp(500px, 72vh, 760px)" }}>
 
-            {/* Pin info panel — appears below map on pin tap */}
-            {activePinSave && (
-              <div className="border border-t-0 border-border bg-card animate-in slide-in-from-top-2 duration-200">
-                <div className="flex gap-0">
-                  {/* Image */}
+            {/* Left: map fills all remaining space */}
+            <div className="flex-1 min-h-[260px] md:min-h-0">
+              <SavesMap
+                saves={saves}
+                selectedIds={selectedSaveIds}
+                onToggle={toggleSelect}
+                activeSave={activePinSave}
+                onPinClick={(save) => setActivePinSave(prev => prev?.id === save.id ? null : save)}
+              />
+            </div>
+
+            {/* Right: info panel */}
+            <div className="w-full md:w-72 lg:w-80 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l border-border bg-card overflow-hidden">
+
+              {activePinSave ? (
+                /* Active pin details */
+                <div className="flex flex-col h-full overflow-y-auto">
                   {activePinSave.scrapedImage && (
-                    <div className="w-28 sm:w-36 flex-shrink-0 overflow-hidden">
-                      <img
-                        src={activePinSave.scrapedImage}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        style={{ minHeight: "120px", maxHeight: "160px" }}
-                      />
+                    <div className="h-40 flex-shrink-0 overflow-hidden">
+                      <img src={activePinSave.scrapedImage} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 p-4 flex flex-col justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="p-5 flex flex-col gap-4 flex-1">
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
                           {activePinSave.category && (
-                            <div className="mb-1.5">
-                              <CategoryBadge category={activePinSave.category} />
-                            </div>
+                            <div className="mb-2"><CategoryBadge category={activePinSave.category} /></div>
                           )}
-                          <h3 className="font-serif font-semibold text-base leading-snug line-clamp-2">
+                          <h3 className="font-serif font-semibold text-lg leading-snug">
                             {activePinSave.scrapedTitle || activePinSave.placeName || activePinSave.content.slice(0, 60)}
                           </h3>
                         </div>
                         <button
                           onClick={() => setActivePinSave(null)}
                           className="flex-shrink-0 p-1 text-muted-foreground hover:text-foreground"
-                          aria-label="Close"
                         >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
 
                       {activePinSave.placeName && (
-                        <p className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
                           <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
-                          <span>{activePinSave.placeName}</span>
+                          {activePinSave.placeName}
+                        </p>
+                      )}
+
+                      {activePinSave.scrapedDescription && (
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-3">
+                          {activePinSave.scrapedDescription.replace(/^(.{0,200}).*/, "$1")}
                         </p>
                       )}
 
                       {activePinSave.tags && activePinSave.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {activePinSave.tags.slice(0, 3).map(tag => (
+                        <div className="flex flex-wrap gap-1.5">
+                          {activePinSave.tags.map(tag => (
                             <span key={tag} className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium tracking-wide border border-border/60 text-muted-foreground bg-muted/20 rounded-sm">
                               {tag}
                             </span>
@@ -665,11 +667,10 @@ export default function Saves() {
                       )}
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 mt-auto">
                       <button
                         onClick={() => toggleSelect(activePinSave.id)}
-                        className={`flex-1 py-2 px-3 text-xs font-semibold tracking-wide border transition-colors ${
+                        className={`w-full py-2.5 px-3 text-sm font-semibold tracking-wide border transition-colors ${
                           selectedSaveIds.includes(activePinSave.id)
                             ? "bg-primary text-primary-foreground border-primary"
                             : "bg-transparent text-foreground border-border hover:bg-muted"
@@ -678,29 +679,60 @@ export default function Saves() {
                         {selectedSaveIds.includes(activePinSave.id) ? "✓ Selected" : "Select for decision"}
                       </button>
                       <button
-                        onClick={() => { setDetailSave(activePinSave); setActivePinSave(null); }}
-                        className="py-2 px-3 text-xs font-medium text-muted-foreground border border-border hover:text-foreground hover:bg-muted transition-colors"
+                        onClick={() => setDetailSave(activePinSave)}
+                        className="w-full py-2 px-3 text-sm font-medium text-muted-foreground border border-border hover:text-foreground hover:bg-muted transition-colors"
                       >
-                        Details
+                        View full details
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                /* No pin selected — show placeholder + save list */
+                <div className="flex flex-col h-full overflow-y-auto">
+                  <div className="p-4 border-b border-border">
+                    <p className="text-xs text-muted-foreground">Tap a pin to see details</p>
+                  </div>
+                  <div className="divide-y divide-border overflow-y-auto flex-1">
+                    {saves.filter(s => s.lat != null).map((save, idx) => (
+                      <button
+                        key={save.id}
+                        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors flex items-start gap-3"
+                        onClick={() => setActivePinSave(save)}
+                      >
+                        <span
+                          className="flex-shrink-0 w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center mt-0.5"
+                          style={{ background: selectedSaveIds.includes(save.id) ? "#6b7c46" : "#3d3d34" }}
+                        >
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {save.scrapedTitle || save.placeName || save.content.slice(0, 40)}
+                          </p>
+                          {save.placeName && (
+                            <p className="text-xs text-muted-foreground truncate">{save.placeName}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Decide bar */}
-            {selectedSaveIds.length > 0 && (
-              <div className="border border-t-0 border-border p-3 bg-foreground">
-                <button
-                  onClick={handleGoDecide}
-                  className="flex items-center justify-center gap-2 w-full text-background text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Decide with {selectedSaveIds.length} {selectedSaveIds.length === 1 ? "place" : "places"}
-                </button>
-              </div>
-            )}
+              {/* Decide bar at bottom of panel */}
+              {selectedSaveIds.length > 0 && (
+                <div className="flex-shrink-0 p-3 bg-foreground border-t border-border">
+                  <button
+                    onClick={handleGoDecide}
+                    className="flex items-center justify-center gap-2 w-full text-background text-sm font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Decide with {selectedSaveIds.length}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="relative">

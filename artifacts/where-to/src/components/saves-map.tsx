@@ -102,11 +102,11 @@ export function SavesMap({ saves, selectedIds, onToggle, activeSave, onPinClick 
   const centerLng = geocodedSaves.reduce((s, sv) => s + sv.lng!, 0) / geocodedSaves.length;
 
   return (
-    <div className="relative border border-border overflow-hidden">
+    <div className="relative border border-border overflow-hidden h-full">
       <MapContainer
         center={[centerLat, centerLng]}
         zoom={3}
-        style={{ height: "min(480px, 65vw)", minHeight: "300px", width: "100%" }}
+        style={{ height: "100%", width: "100%" }}
         scrollWheelZoom
       >
         <TileLayer
