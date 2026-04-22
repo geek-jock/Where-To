@@ -91,25 +91,36 @@ function buildRawDescription(parts: (string | null | undefined)[]): string {
   return (deduped + footer).slice(0, 900);
 }
 
-/** AI generates a short editorial title from the cleaned description */
-async function generateTitle(description: string, url: string): Promise<string | null> {
-  if (!description.trim()) return null;
+/** AI cleans the raw page title and optionally uses description for context */
+async function generateTitle(rawTitle: string | null, description: string | null, url: string): Promise<string | null> {
+  if (!rawTitle && !description) return null;
   try {
+    const context = [
+      rawTitle ? `Raw page title: ${rawTitle}` : null,
+      description ? `Description: ${description.slice(0, 400)}` : null,
+      `URL: ${url}`,
+    ].filter(Boolean).join("\n");
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You name travel saves. Given the description of a place or travel experience, return ONLY a title: 3–7 words, specific, editorial, no quotes, no punctuation at the end.
-Name the actual place if identifiable (e.g. "Amalfi Coast Cliffside Hotel"). If it's an experience, name the vibe (e.g. "Quiet Ryokan in Kyoto Mountains"). Never use generic titles like "Instagram Post" or "Travel Video".`,
+          content: `You create clean titles for saved travel places.
+
+Your job is to EXTRACT and CLEAN the place or experience name — not invent one.
+
+Rules:
+- Use the raw page title as the primary source. Clean it by removing platform suffixes ("| TikTok", "— YouTube", "· Google Maps"), handle/username prefixes, excessive hashtags, and emoji clusters.
+- Keep place names, city names, and meaningful descriptors from the original title.
+- If the raw title is pure platform boilerplate (e.g. "Instagram", "TikTok - Make Your Day"), use the description instead.
+- Return ONLY the title: 2–7 words, no quotes, no trailing punctuation.
+- Examples: "Positano Amalfi Coast" not "Vibrant Italian Coastal Gem"; "Arashiyama Bamboo Grove Kyoto" not "Serene Forest Walk in Japan"`,
         },
-        {
-          role: "user",
-          content: `URL: ${url}\n\nDescription:\n${description.slice(0, 500)}`,
-        },
+        { role: "user", content: context },
       ],
       max_tokens: 30,
-      temperature: 0.35,
+      temperature: 0.2,
     });
     const title = completion.choices[0]?.message?.content?.trim() ?? null;
     return title || null;
@@ -156,10 +167,11 @@ async function scrapeUrl(url: string) {
     // Combine ALL scraped content into description, then clean
     const description = buildRawDescription([rawMetaDesc, bodyText]) || null;
 
-    // AI reads the clean body only (strip the noise footer before sending to AI)
-    const descriptionForTitle = description?.split("\n\n—")[0].trim() ?? rawTitle ?? "";
-    const aiTitle = await generateTitle(descriptionForTitle, url);
-    const title = aiTitle ?? (rawTitle ? decodeEntities(rawTitle).trim() : null);
+    // AI: clean the raw title (primary) + use description for context
+    const cleanRawTitle = rawTitle ? decodeEntities(rawTitle).trim() : null;
+    const descriptionCleanBody = description?.split("\n\n—")[0].trim() ?? null;
+    const aiTitle = await generateTitle(cleanRawTitle, descriptionCleanBody, url);
+    const title = aiTitle ?? cleanRawTitle;
 
     return { url, title, description, image, siteName };
   } catch {
