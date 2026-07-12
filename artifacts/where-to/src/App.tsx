@@ -109,11 +109,13 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
-function HomeRedirect() {
+function HomeRoute() {
   return (
     <>
       <Show when="signed-in">
-        <Redirect to="/saves" />
+        <Layout>
+          <Decide />
+        </Layout>
       </Show>
       <Show when="signed-out">
         <Home />
@@ -165,13 +167,18 @@ function ClerkProviderWithRoutes() {
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
         <Switch>
-          <Route path="/" component={HomeRedirect} />
+          <Route path="/" component={HomeRoute} />
           <Route path="/sso-callback" component={SSOCallbackPage} />
           <Route path="/saves">
             <ProtectedRoute component={Saves} />
           </Route>
           <Route path="/decide">
-            <ProtectedRoute component={Decide} />
+            <Show when="signed-in">
+              <Redirect to="/" />
+            </Show>
+            <Show when="signed-out">
+              <Redirect to="/" />
+            </Show>
           </Route>
           <Route path="/history/:id">
             <ProtectedRoute component={DecisionView} />

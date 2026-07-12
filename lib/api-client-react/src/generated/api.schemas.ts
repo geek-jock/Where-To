@@ -60,6 +60,14 @@ export interface CreateDecisionBody {
   saveIds: number[];
 }
 
+export interface SaveSelectionInput {
+  question: string;
+}
+
+export interface SaveSelection {
+  saveIds: number[];
+}
+
 export interface DeleteResult {
   success: boolean;
 }

@@ -196,6 +196,70 @@ router.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
+router.post("/select-saves", requireAuth, async (req: any, res): Promise<void> => {
+  try {
+    const { question } = req.body;
+    if (!question || typeof question !== "string") {
+      res.status(400).json({ error: "question is required" });
+      return;
+    }
+
+    const saves = await db
+      .select()
+      .from(savesTable)
+      .where(eq(savesTable.userId, req.userId));
+
+    if (saves.length === 0) {
+      res.json({ saveIds: [] });
+      return;
+    }
+
+    const saveSummaries = saves.map(s => {
+      const label = s.scrapedTitle || s.placeName || (s.content?.slice(0, 80) ?? "");
+      const tags = (Array.isArray(s.tags) ? s.tags : []).join(", ");
+      const place = s.placeName ?? "";
+      return `ID:${s.id} | ${label}${place ? ` | ${place}` : ""}${tags ? ` | tags: ${tags}` : ""}`;
+    }).join("\n");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_completion_tokens: 256,
+      messages: [
+        {
+          role: "system",
+          content: `You are a travel assistant. Given a user's question and their saved travel items, select the most relevant save IDs (up to 10). Return ONLY a JSON object with a "saveIds" array of integers. No explanation.`,
+        },
+        {
+          role: "user",
+          content: `Question: ${question}\n\nSaved items:\n${saveSummaries}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content ?? "{}";
+    let saveIds: number[] = [];
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed.saveIds)) {
+        saveIds = parsed.saveIds
+          .filter((id: unknown) => typeof id === "number" && Number.isInteger(id))
+          .slice(0, 10);
+      }
+    } catch {
+      saveIds = [];
+    }
+
+    const validIds = new Set(saves.map(s => s.id));
+    saveIds = saveIds.filter(id => validIds.has(id));
+
+    res.json({ saveIds });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to select saves" });
+  }
+});
+
 router.delete("/:id", requireAuth, async (req: any, res) => {
   try {
     const id = parseInt(req.params.id);

@@ -12,7 +12,7 @@ export default function Home() {
     await signIn.authenticateWithRedirect({
       strategy: "oauth_google",
       redirectUrl: `${window.location.origin}${basePath}/sso-callback`,
-      redirectUrlComplete: `${window.location.origin}${basePath}/saves`,
+      redirectUrlComplete: `${window.location.origin}${basePath}/`,
     });
   }
 

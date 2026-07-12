@@ -192,6 +192,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/Decision"
 
+  /decisions/select-saves:
+    post:
+      operationId: selectSavesForDecision
+      tags: [decisions]
+      summary: AI-selects the most relevant saves for a given question
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveSelectionInput"
+      responses:
+        "200":
+          description: Selected save IDs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveSelection"
+
   /decisions/{id}:
     get:
       operationId: getDecision
@@ -405,6 +426,24 @@ components:
             type: integer
       required:
         - question
+        - saveIds
+
+    SaveSelectionInput:
+      type: object
+      properties:
+        question:
+          type: string
+      required:
+        - question
+
+    SaveSelection:
+      type: object
+      properties:
+        saveIds:
+          type: array
+          items:
+            type: integer
+      required:
         - saveIds
 
     DeleteResult:

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { 
   useListSaves, 
   useCreateSave, 
@@ -13,7 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Save } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Sparkles, Maximize2, ExternalLink, Pencil, X, Check, Tag, Building2, UtensilsCrossed, Star, TreePine, Landmark, ShoppingBag } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Maximize2, ExternalLink, Pencil, X, Check, Tag, Building2, UtensilsCrossed, Star, TreePine, Landmark, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,7 +144,6 @@ function SaveDetailDialog({
   const isNote = !save.url;
   const hasOwnNote = save.scrapedTitle && save.content && save.content !== save.url;
 
-  // Determine source domain for display
   let sourceDomain = "";
   try { if (save.url) sourceDomain = new URL(save.url).hostname.replace("www.", ""); } catch { /* ignore */ }
 
@@ -226,7 +224,7 @@ function SaveDetailDialog({
             </div>
           )}
 
-          {/* Your note (user-typed note separate from scraped description) */}
+          {/* Your note */}
           {!editing && (hasOwnNote || isNote) && (
             <div className="px-6 py-4">
               <Section label={isNote ? "Note" : "Your note"}>
@@ -315,7 +313,6 @@ export default function Saves() {
   const { data: saves = [], isLoading } = useListSaves();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
 
   const createSave = useCreateSave();
   const deleteSave = useDeleteSave();
@@ -333,19 +330,8 @@ export default function Saves() {
   } | null>(null);
 
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
-  const [selectedSaveIds, setSelectedSaveIds] = useState<number[]>([]);
   const [detailSave, setDetailSave] = useState<Save | null>(null);
   const [activePinSave, setActivePinSave] = useState<Save | null>(null);
-
-  const toggleSelect = (id: number) => {
-    setSelectedSaveIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleGoDecide = () => {
-    setLocation(`/decide?saveIds=${selectedSaveIds.join(",")}`);
-  };
 
   const handleScrape = async () => {
     if (!urlInput.trim()) return;
@@ -412,7 +398,6 @@ export default function Saves() {
   const handleDelete = async (id: number) => {
     try {
       await deleteSave.mutateAsync({ id });
-      setSelectedSaveIds(prev => prev.filter(x => x !== id));
       queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
     } catch {
       toast({ title: "Failed to delete", variant: "destructive" });
@@ -551,15 +536,14 @@ export default function Saves() {
             <p>Your library is empty. Save some links or ideas to get started.</p>
           </div>
         ) : viewMode === "map" ? (
-          /* ── Side-by-side map layout ── */
           <div className="border border-border overflow-hidden flex flex-col md:flex-row" style={{ height: "clamp(500px, 72vh, 760px)" }}>
 
-            {/* Left: map fills all remaining space */}
+            {/* Left: map */}
             <div className="flex-1 min-h-[260px] md:min-h-0">
               <SavesMap
                 saves={saves}
-                selectedIds={selectedSaveIds}
-                onToggle={toggleSelect}
+                selectedIds={[]}
+                onToggle={() => {}}
                 activeSave={activePinSave}
                 onPinClick={(save) => setActivePinSave(prev => prev?.id === save.id ? null : save)}
               />
@@ -569,7 +553,6 @@ export default function Saves() {
             <div className="w-full md:w-72 lg:w-80 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l border-border bg-card overflow-hidden">
 
               {activePinSave ? (
-                /* Active pin details */
                 <div className="flex flex-col h-full overflow-y-auto">
                   <div className="p-5 flex flex-col gap-4 flex-1">
                     <div>
@@ -614,17 +597,7 @@ export default function Saves() {
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2 mt-auto">
-                      <button
-                        onClick={() => toggleSelect(activePinSave.id)}
-                        className={`w-full py-2.5 px-3 text-sm font-semibold tracking-wide border transition-colors ${
-                          selectedSaveIds.includes(activePinSave.id)
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-transparent text-foreground border-border hover:bg-muted"
-                        }`}
-                      >
-                        {selectedSaveIds.includes(activePinSave.id) ? "✓ Selected" : "Select for decision"}
-                      </button>
+                    <div className="mt-auto">
                       <button
                         onClick={() => setDetailSave(activePinSave)}
                         className="w-full py-2 px-3 text-sm font-medium text-muted-foreground border border-border hover:text-foreground hover:bg-muted transition-colors"
@@ -635,24 +608,17 @@ export default function Saves() {
                   </div>
                 </div>
               ) : (
-                /* No pin selected — show placeholder + save list */
                 <div className="flex flex-col h-full overflow-y-auto">
                   <div className="p-4 border-b border-border">
                     <p className="text-xs text-muted-foreground">Tap a pin to see details</p>
                   </div>
                   <div className="divide-y divide-border overflow-y-auto flex-1">
-                    {saves.filter(s => s.lat != null).map((save, idx) => (
+                    {saves.filter(s => s.lat != null).map((save) => (
                       <button
                         key={save.id}
                         className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors flex items-start gap-3"
                         onClick={() => setActivePinSave(save)}
                       >
-                        <span
-                          className="flex-shrink-0 w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center mt-0.5"
-                          style={{ background: selectedSaveIds.includes(save.id) ? "#6b7c46" : "#3d3d34" }}
-                        >
-                          {idx + 1}
-                        </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">
                             {save.scrapedTitle || save.placeName || save.content.slice(0, 40)}
@@ -666,164 +632,122 @@ export default function Saves() {
                   </div>
                 </div>
               )}
-
-              {/* Decide bar at bottom of panel */}
-              {selectedSaveIds.length > 0 && (
-                <div className="flex-shrink-0 p-3 bg-foreground border-t border-border">
-                  <button
-                    onClick={handleGoDecide}
-                    className="flex items-center justify-center gap-2 w-full text-background text-sm font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Decide with {selectedSaveIds.length}
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         ) : (
-          <div className="relative">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {saves.map((save, idx) => {
-                const isSelected = selectedSaveIds.includes(save.id);
-                const hasLocation = save.lat != null && save.lng != null;
-                const num = saves.filter(s => s.lat != null).indexOf(save) + 1;
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {saves.map((save) => {
+              const hasLocation = save.lat != null && save.lng != null;
 
-                return (
-                  <Card
-                    key={save.id}
-                    className={`overflow-hidden flex flex-col group shadow-none cursor-pointer transition-all ${
-                      isSelected ? "ring-2 ring-primary ring-offset-1" : ""
-                    }`}
-                    onClick={() => toggleSelect(save.id)}
-                    data-testid={`card-save-${save.id}`}
-                  >
-                    {save.category ? (
-                      <div className="px-5 pt-4 pb-0">
-                        <CategoryBadge category={save.category} />
-                      </div>
-                    ) : null}
-                    <CardContent className="p-5 flex-1">
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          {save.scrapedTitle ? (
-                            <>
-                              <h3 className="font-serif font-semibold text-lg line-clamp-2 mb-2">
-                                <a
-                                  href={save.url!}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="hover:underline"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  {save.scrapedTitle}
-                                </a>
-                              </h3>
-                              {save.scrapedDescription && (
-                                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{save.scrapedDescription}</p>
-                              )}
-                            </>
-                          ) : (
-                            <p className="text-foreground whitespace-pre-wrap text-sm">{save.content}</p>
-                          )}
-                          {save.url && !save.scrapedTitle && (
-                            <a
-                              href={save.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sm text-primary hover:underline flex items-center gap-1 mt-2 truncate"
-                              onClick={e => e.stopPropagation()}
-                            >
-                              <LinkIcon className="h-3 w-3 flex-shrink-0" /> {save.url}
-                            </a>
-                          )}
-                        </div>
-                        <div className="flex-shrink-0 flex flex-col items-end gap-1.5 pl-2">
-                          {hasLocation ? (
-                            <span
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold"
-                              style={{ background: isSelected ? "#6b7c46" : "#3d3d34" }}
-                              title={save.placeName ?? undefined}
-                            >
-                              {saves.filter(s => s.lat != null).indexOf(save) + 1}
-                            </span>
-                          ) : (
-                            <button
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                              title="No location detected — click to retry"
-                              onClick={(e) => { e.stopPropagation(); geocodeSave.mutate({ id: save.id }); }}
-                            >
-                              <MapPinOff className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                    {/* Tags row */}
-                    {save.tags && save.tags.length > 0 && (
-                      <div className="px-5 pb-3 flex flex-wrap gap-1.5">
-                        {save.tags.slice(0, 3).map(tag => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium tracking-wide border border-border/60 text-muted-foreground bg-muted/20 rounded-sm"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <CardFooter className="p-4 pt-0 flex justify-between items-center bg-card mt-auto text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        {save.placeName && (
-                          <>
-                            <MapPin className="h-3 w-3 text-primary" />
-                            <span className="text-primary font-medium">{save.placeName}</span>
-                            <span className="mx-1 opacity-30">·</span>
-                          </>
-                        )}
-                        {format(new Date(save.createdAt), "MMM d, yyyy")}
-                      </span>
-                      <div className="flex items-center gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => { e.stopPropagation(); setDetailSave(save); }}
-                          title="View full details"
-                        >
-                          <Maximize2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(save.id); }}
-                          data-testid={`button-delete-save-${save.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {selectedSaveIds.length > 0 && (
-              <div
-                className="fixed left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300"
-                style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4rem)" }}
-              >
-                <button
-                  onClick={handleGoDecide}
-                  className="flex items-center gap-2 px-6 py-3 bg-foreground text-background text-sm font-medium shadow-xl hover:opacity-90 transition-opacity whitespace-nowrap"
+              return (
+                <Card
+                  key={save.id}
+                  className="overflow-hidden flex flex-col group shadow-none cursor-pointer transition-all hover:shadow-sm"
+                  onClick={() => setDetailSave(save)}
+                  data-testid={`card-save-${save.id}`}
                 >
-                  <Sparkles className="h-4 w-4" />
-                  Decide with {selectedSaveIds.length} {selectedSaveIds.length === 1 ? "place" : "places"}
-                </button>
-              </div>
-            )}
+                  {save.category ? (
+                    <div className="px-5 pt-4 pb-0">
+                      <CategoryBadge category={save.category} />
+                    </div>
+                  ) : null}
+                  <CardContent className="p-5 flex-1">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        {save.scrapedTitle ? (
+                          <>
+                            <h3 className="font-serif font-semibold text-lg line-clamp-2 mb-2">
+                              <a
+                                href={save.url!}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:underline"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {save.scrapedTitle}
+                              </a>
+                            </h3>
+                            {save.scrapedDescription && (
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{save.scrapedDescription}</p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-foreground whitespace-pre-wrap text-sm">{save.content}</p>
+                        )}
+                        {save.url && !save.scrapedTitle && (
+                          <a
+                            href={save.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm text-primary hover:underline flex items-center gap-1 mt-2 truncate"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <LinkIcon className="h-3 w-3 flex-shrink-0" /> {save.url}
+                          </a>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 flex flex-col items-end gap-1.5 pl-2">
+                        {!hasLocation && (
+                          <button
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            title="No location detected — click to retry"
+                            onClick={(e) => { e.stopPropagation(); geocodeSave.mutate({ id: save.id }); }}
+                          >
+                            <MapPinOff className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                  {/* Tags row */}
+                  {save.tags && save.tags.length > 0 && (
+                    <div className="px-5 pb-3 flex flex-wrap gap-1.5">
+                      {save.tags.slice(0, 3).map(tag => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium tracking-wide border border-border/60 text-muted-foreground bg-muted/20 rounded-sm"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <CardFooter className="p-4 pt-0 flex justify-between items-center bg-card mt-auto text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      {save.placeName && (
+                        <>
+                          <MapPin className="h-3 w-3 text-primary" />
+                          <span className="text-primary font-medium">{save.placeName}</span>
+                          <span className="mx-1 opacity-30">·</span>
+                        </>
+                      )}
+                      {format(new Date(save.createdAt), "MMM d, yyyy")}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => { e.stopPropagation(); setDetailSave(save); }}
+                        title="View full details"
+                      >
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(save.id); }}
+                        data-testid={`button-delete-save-${save.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

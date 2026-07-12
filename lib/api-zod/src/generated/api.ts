@@ -167,6 +167,17 @@ export const CreateDecisionBody = zod.object({
 });
 
 /**
+ * @summary AI-selects the most relevant saves for a given question
+ */
+export const SelectSavesForDecisionBody = zod.object({
+  question: zod.string(),
+});
+
+export const SelectSavesForDecisionResponse = zod.object({
+  saveIds: zod.array(zod.number()),
+});
+
+/**
  * @summary Get a single decision
  */
 export const GetDecisionParams = zod.object({

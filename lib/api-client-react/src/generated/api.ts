@@ -23,6 +23,8 @@ import type {
   DeleteResult,
   HealthStatus,
   Save,
+  SaveSelection,
+  SaveSelectionInput,
   ScrapeResult,
   ScrapeUrlBody,
   UpdateSaveBody,
@@ -762,6 +764,92 @@ export const useCreateDecision = <
   TContext
 > => {
   return useMutation(getCreateDecisionMutationOptions(options));
+};
+
+/**
+ * @summary AI-selects the most relevant saves for a given question
+ */
+export const getSelectSavesForDecisionUrl = () => {
+  return `/api/decisions/select-saves`;
+};
+
+export const selectSavesForDecision = async (
+  saveSelectionInput: SaveSelectionInput,
+  options?: RequestInit,
+): Promise<SaveSelection> => {
+  return customFetch<SaveSelection>(getSelectSavesForDecisionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(saveSelectionInput),
+  });
+};
+
+export const getSelectSavesForDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof selectSavesForDecision>>,
+    TError,
+    { data: BodyType<SaveSelectionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof selectSavesForDecision>>,
+  TError,
+  { data: BodyType<SaveSelectionInput> },
+  TContext
+> => {
+  const mutationKey = ["selectSavesForDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof selectSavesForDecision>>,
+    { data: BodyType<SaveSelectionInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return selectSavesForDecision(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SelectSavesForDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof selectSavesForDecision>>
+>;
+export type SelectSavesForDecisionMutationBody = BodyType<SaveSelectionInput>;
+export type SelectSavesForDecisionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary AI-selects the most relevant saves for a given question
+ */
+export const useSelectSavesForDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof selectSavesForDecision>>,
+    TError,
+    { data: BodyType<SaveSelectionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof selectSavesForDecision>>,
+  TError,
+  { data: BodyType<SaveSelectionInput> },
+  TContext
+> => {
+  return useMutation(getSelectSavesForDecisionMutationOptions(options));
 };
 
 /**

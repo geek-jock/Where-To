@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
-import { Compass, Bookmark, CheckCircle, History, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Compass, Bookmark, Sparkles, History, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -17,8 +17,8 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [collapsed]);
 
   const navigation = [
-    { name: "Saves", href: "/saves", icon: Bookmark },
-    { name: "Decide", href: "/decide", icon: CheckCircle },
+    { name: "Decide", href: "/", icon: Sparkles },
+    { name: "Library", href: "/saves", icon: Bookmark },
     { name: "History", href: "/history", icon: History },
   ];
 
@@ -27,7 +27,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-        <Link href="/saves" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <Compass className="h-5 w-5 text-primary" />
           <span className="font-serif font-bold text-base">Where To</span>
         </Link>
@@ -51,7 +51,7 @@ export function Layout({ children }: { children: ReactNode }) {
       >
         {/* Logo */}
         <div className={`flex items-center gap-2 p-4 h-[72px] ${collapsed ? "justify-center" : "px-6"}`}>
-          <Link href="/saves" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Compass className="h-6 w-6 text-primary flex-shrink-0" />
             {!collapsed && <span className="font-serif font-bold text-xl">Where To</span>}
           </Link>
@@ -60,7 +60,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Nav items */}
         <nav className="flex flex-col gap-1 px-2 flex-1">
           {navigation.map((item) => {
-            const isActive = location === item.href;
+            const isActive = item.href === "/" ? location === "/" : location === item.href;
             return (
               <Link
                 key={item.name}
@@ -146,7 +146,7 @@ export function Layout({ children }: { children: ReactNode }) {
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         {navigation.map((item) => {
-          const isActive = location === item.href;
+          const isActive = item.href === "/" ? location === "/" : location === item.href;
           return (
             <Link
               key={item.name}

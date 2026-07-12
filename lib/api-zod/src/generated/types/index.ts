@@ -12,6 +12,8 @@ export * from "./decision";
 export * from "./deleteResult";
 export * from "./healthStatus";
 export * from "./save";
+export * from "./saveSelection";
+export * from "./saveSelectionInput";
 export * from "./scrapeResult";
 export * from "./scrapeUrlBody";
 export * from "./updateSaveBody";
