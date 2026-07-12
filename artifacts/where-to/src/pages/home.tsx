@@ -1,6 +1,7 @@
 import { useSignIn } from "@clerk/react/legacy";
 import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -30,7 +31,7 @@ export default function Home() {
         <p className="text-lg md:text-xl text-muted-foreground max-w-md mx-auto" data-testid="text-hero-subtitle">
           A quiet place to gather your travel ideas and let an editorial intelligence make the final call for you.
         </p>
-        <div className="pt-8">
+        <div className="pt-8 flex flex-col items-center gap-4">
           <Button
             size="lg"
             className="h-12 px-8 text-base shadow-sm"
@@ -40,6 +41,13 @@ export default function Home() {
           >
             Continue with Google
           </Button>
+          <Link
+            href="/demo"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+            data-testid="link-see-demo"
+          >
+            See how it works →
+          </Link>
         </div>
       </div>
     </div>
