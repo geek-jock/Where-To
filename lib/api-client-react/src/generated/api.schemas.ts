@@ -46,11 +46,35 @@ export interface CreateSaveBody {
   scrapedImage?: string | null;
 }
 
+export interface VerdictJson {
+  verdict: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  travelPatterns: string[];
+  coreConflict: string;
+  whatYoureMissing: string;
+  whyThisFits: string;
+  tradeoffs: string;
+  avoidIf: string[];
+  nextMove: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  anchors: string[];
+  timingConfidence: string;
+  stopDoingThis: string;
+  usedSaveIds: number[];
+}
+
 export interface Decision {
   id: number;
   userId: string;
   question: string;
   result: string;
+  resultJson?: VerdictJson | null;
   savesSnapshot: string;
   createdAt: string;
 }

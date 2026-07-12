@@ -148,11 +148,39 @@ export const DeleteSaveResponse = zod.object({
 /**
  * @summary List all decisions for the current user
  */
+export const listDecisionsResponseResultJsonOneTravelPatternsMin = 3;
+export const listDecisionsResponseResultJsonOneTravelPatternsMax = 3;
+
+export const listDecisionsResponseResultJsonOneAnchorsMin = 3;
+export const listDecisionsResponseResultJsonOneAnchorsMax = 3;
+
 export const ListDecisionsResponseItem = zod.object({
   id: zod.number(),
   userId: zod.string(),
   question: zod.string(),
   result: zod.string(),
+  resultJson: zod
+    .object({
+      verdict: zod.string(),
+      travelPatterns: zod
+        .array(zod.string())
+        .min(listDecisionsResponseResultJsonOneTravelPatternsMin)
+        .max(listDecisionsResponseResultJsonOneTravelPatternsMax),
+      coreConflict: zod.string(),
+      whatYoureMissing: zod.string(),
+      whyThisFits: zod.string(),
+      tradeoffs: zod.string(),
+      avoidIf: zod.array(zod.string()),
+      nextMove: zod.string(),
+      anchors: zod
+        .array(zod.string())
+        .min(listDecisionsResponseResultJsonOneAnchorsMin)
+        .max(listDecisionsResponseResultJsonOneAnchorsMax),
+      timingConfidence: zod.string(),
+      stopDoingThis: zod.string(),
+      usedSaveIds: zod.array(zod.number()),
+    })
+    .nullish(),
   savesSnapshot: zod.string(),
   createdAt: zod.coerce.date(),
 });
@@ -184,11 +212,39 @@ export const GetDecisionParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getDecisionResponseResultJsonOneTravelPatternsMin = 3;
+export const getDecisionResponseResultJsonOneTravelPatternsMax = 3;
+
+export const getDecisionResponseResultJsonOneAnchorsMin = 3;
+export const getDecisionResponseResultJsonOneAnchorsMax = 3;
+
 export const GetDecisionResponse = zod.object({
   id: zod.number(),
   userId: zod.string(),
   question: zod.string(),
   result: zod.string(),
+  resultJson: zod
+    .object({
+      verdict: zod.string(),
+      travelPatterns: zod
+        .array(zod.string())
+        .min(getDecisionResponseResultJsonOneTravelPatternsMin)
+        .max(getDecisionResponseResultJsonOneTravelPatternsMax),
+      coreConflict: zod.string(),
+      whatYoureMissing: zod.string(),
+      whyThisFits: zod.string(),
+      tradeoffs: zod.string(),
+      avoidIf: zod.array(zod.string()),
+      nextMove: zod.string(),
+      anchors: zod
+        .array(zod.string())
+        .min(getDecisionResponseResultJsonOneAnchorsMin)
+        .max(getDecisionResponseResultJsonOneAnchorsMax),
+      timingConfidence: zod.string(),
+      stopDoingThis: zod.string(),
+      usedSaveIds: zod.array(zod.number()),
+    })
+    .nullish(),
   savesSnapshot: zod.string(),
   createdAt: zod.coerce.date(),
 });

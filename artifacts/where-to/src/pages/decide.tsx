@@ -6,7 +6,7 @@ import {
   useSelectSavesForDecision,
   getListDecisionsQueryKey,
 } from "@workspace/api-client-react";
-import type { Save } from "@workspace/api-client-react";
+import type { Save, VerdictJson } from "@workspace/api-client-react";
 import { Loader2, Sparkles, X, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,7 +46,7 @@ export default function Decide() {
   const [selectedSaveIds, setSelectedSaveIds] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [decision, setDecision] = useState<{ question: string; result: string; createdAt: string } | null>(null);
+  const [decision, setDecision] = useState<{ question: string; result: string; resultJson?: VerdictJson | null; createdAt: string } | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const selectedSaves = saves.filter(s => selectedSaveIds.includes(s.id));
@@ -105,7 +105,7 @@ export default function Decide() {
         data: { question, saveIds: selectedSaveIds }
       });
       queryClient.invalidateQueries({ queryKey: getListDecisionsQueryKey() });
-      setDecision({ question: res.question, result: res.result, createdAt: res.createdAt });
+      setDecision({ question: res.question, result: res.result, resultJson: res.resultJson, createdAt: res.createdAt });
       setPhase("result");
     } catch {
       toast({ title: "Failed to generate decision", variant: "destructive" });
@@ -125,6 +125,7 @@ export default function Decide() {
       <DecisionResult
         question={decision.question}
         result={decision.result}
+        resultJson={decision.resultJson}
         createdAt={decision.createdAt}
         onNewDecision={handleNewDecision}
       />

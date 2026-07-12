@@ -5,8 +5,24 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import type { Decision } from "@workspace/api-client-react";
 
-function extractVerdict(result: string): string {
+function extractVerdictFromJson(decision: Decision): string {
+  if (decision.resultJson) {
+    return decision.resultJson.verdict;
+  }
+  return extractVerdictFromText(decision.result);
+}
+
+function extractSummaryFromJson(decision: Decision): string {
+  if (decision.resultJson) {
+    const patterns = decision.resultJson.travelPatterns.slice(0, 2);
+    return patterns.join(" · ");
+  }
+  return extractSummaryFromText(decision.result);
+}
+
+function extractVerdictFromText(result: string): string {
   const lines = result.split("\n");
   let nextIsVerdict = false;
   for (const raw of lines) {
@@ -25,7 +41,7 @@ function extractVerdict(result: string): string {
   return first?.trim() ?? "View decision";
 }
 
-function extractSummary(result: string): string {
+function extractSummaryFromText(result: string): string {
   const lines = result.split("\n");
   const bullets = lines.filter(l => l.trim().startsWith("-")).slice(0, 2);
   if (bullets.length > 0) return bullets.map(b => b.replace(/^-\s*/, "").trim()).join(" · ");
@@ -66,8 +82,8 @@ export default function History() {
       ) : (
         <div className="space-y-3">
           {decisions.map(decision => {
-            const verdict = extractVerdict(decision.result);
-            const summary = extractSummary(decision.result);
+            const verdict = extractVerdictFromJson(decision);
+            const summary = extractSummaryFromJson(decision);
             return (
               <Link
                 key={decision.id}

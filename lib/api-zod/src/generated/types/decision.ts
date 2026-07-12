@@ -5,12 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { VerdictJson } from "./verdictJson";
 
 export interface Decision {
   id: number;
   userId: string;
   question: string;
   result: string;
+  resultJson?: VerdictJson | null;
   savesSnapshot: string;
   createdAt: Date;
 }

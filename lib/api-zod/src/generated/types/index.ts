@@ -17,3 +17,4 @@ export * from "./saveSelectionInput";
 export * from "./scrapeResult";
 export * from "./scrapeUrlBody";
 export * from "./updateSaveBody";
+export * from "./verdictJson";

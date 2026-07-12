@@ -33,6 +33,7 @@ export default function DecisionView() {
     <DecisionResult
       question={decision.question}
       result={decision.result}
+      resultJson={decision.resultJson}
       createdAt={decision.createdAt}
       backHref="/history"
     />

@@ -391,6 +391,59 @@ components:
       required:
         - content
 
+    VerdictJson:
+      type: object
+      properties:
+        verdict:
+          type: string
+        travelPatterns:
+          type: array
+          items:
+            type: string
+          minItems: 3
+          maxItems: 3
+        coreConflict:
+          type: string
+        whatYoureMissing:
+          type: string
+        whyThisFits:
+          type: string
+        tradeoffs:
+          type: string
+        avoidIf:
+          type: array
+          items:
+            type: string
+        nextMove:
+          type: string
+        anchors:
+          type: array
+          items:
+            type: string
+          minItems: 3
+          maxItems: 3
+        timingConfidence:
+          type: string
+        stopDoingThis:
+          type: string
+        usedSaveIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - verdict
+        - travelPatterns
+        - coreConflict
+        - whatYoureMissing
+        - whyThisFits
+        - tradeoffs
+        - avoidIf
+        - nextMove
+        - anchors
+        - timingConfidence
+        - stopDoingThis
+        - usedSaveIds
+
     Decision:
       type: object
       properties:
@@ -402,6 +455,10 @@ components:
           type: string
         result:
           type: string
+        resultJson:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/VerdictJson"
         savesSnapshot:
           type: string
         createdAt:

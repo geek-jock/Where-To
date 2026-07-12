@@ -2,6 +2,8 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import type { VerdictJson } from "@workspace/api-client-react";
+import { VerdictDisplay } from "./verdict-display";
 
 type ParsedSection = { label: string; lines: string[] };
 
@@ -13,7 +15,6 @@ function parseResult(result: string): ParsedSection[] {
     const line = raw.trim();
     if (!line || line === "---") continue;
 
-    // Detect section headers: lines ending with ":" that are short
     const isHeader =
       line.endsWith(":") &&
       line.length < 80 &&
@@ -21,7 +22,6 @@ function parseResult(result: string): ParsedSection[] {
       !line.startsWith("*") &&
       !/^\d+\./.test(line);
 
-    // Also detect "Label: inline content" patterns
     const inlineMatch = !line.startsWith("-") && !line.startsWith("*") && !/^\d+\./.test(line)
       ? line.match(/^([A-Z][^:]{3,60}):\s+(.+)$/)
       : null;
@@ -98,14 +98,26 @@ const SKIP_LABELS = new Set([
 interface DecisionResultProps {
   question: string;
   result: string;
+  resultJson?: VerdictJson | null;
   createdAt?: string;
   backHref?: string;
   onNewDecision?: () => void;
 }
 
-export function DecisionResult({ question, result, createdAt, backHref, onNewDecision }: DecisionResultProps) {
-  const sections = parseResult(result);
+export function DecisionResult({ question, result, resultJson, createdAt, backHref, onNewDecision }: DecisionResultProps) {
+  if (resultJson) {
+    return (
+      <VerdictDisplay
+        question={question}
+        verdictJson={resultJson}
+        createdAt={createdAt}
+        backHref={backHref}
+        onNewDecision={onNewDecision}
+      />
+    );
+  }
 
+  const sections = parseResult(result);
   const verdictSection = sections.find(s => VERDICT_LABELS.has(s.label));
   const bodySections = sections.filter(s => !VERDICT_LABELS.has(s.label) && !ACTION_LABELS.has(s.label) && !SKIP_LABELS.has(s.label));
   const actionSections = sections.filter(s => ACTION_LABELS.has(s.label) && !SKIP_LABELS.has(s.label));
@@ -113,7 +125,6 @@ export function DecisionResult({ question, result, createdAt, backHref, onNewDec
   return (
     <div className="space-y-12 max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-500 pb-28">
 
-      {/* Back link */}
       {backHref && (
         <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -121,7 +132,6 @@ export function DecisionResult({ question, result, createdAt, backHref, onNewDec
         </Link>
       )}
 
-      {/* Question */}
       <div className="space-y-3">
         <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">The Question</p>
         <p className="text-xl font-serif italic text-foreground border-l-2 border-primary pl-5 leading-snug">
@@ -134,7 +144,6 @@ export function DecisionResult({ question, result, createdAt, backHref, onNewDec
         )}
       </div>
 
-      {/* Verdict — the big headline */}
       {verdictSection && verdictSection.lines.length > 0 && (
         <div className="py-8 border-t border-b border-border space-y-3">
           <p className="text-xs font-semibold tracking-widest uppercase text-primary">The Verdict</p>
@@ -144,7 +153,6 @@ export function DecisionResult({ question, result, createdAt, backHref, onNewDec
         </div>
       )}
 
-      {/* Body sections */}
       {bodySections.length > 0 && (
         <div className="space-y-10">
           {bodySections.map((sec, i) => (
@@ -160,7 +168,6 @@ export function DecisionResult({ question, result, createdAt, backHref, onNewDec
         </div>
       )}
 
-      {/* Action block */}
       {actionSections.length > 0 && (
         <div className="bg-card border border-border p-6 md:p-8 space-y-7">
           <p className="text-xs font-semibold tracking-widest uppercase text-primary">Action Plan</p>
@@ -189,7 +196,6 @@ export function DecisionResult({ question, result, createdAt, backHref, onNewDec
         </div>
       )}
 
-      {/* Footer actions */}
       {(backHref || onNewDecision) && (
         <div className="flex flex-wrap justify-center gap-3 pt-4">
           {backHref && (
