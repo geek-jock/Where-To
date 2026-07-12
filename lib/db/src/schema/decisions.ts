@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const verdictJsonSchema = z.object({
+  type: z.enum(["choose", "structure"]),
   verdict: z.string(),
   travelPatterns: z.tuple([z.string(), z.string(), z.string()]),
   coreConflict: z.string(),

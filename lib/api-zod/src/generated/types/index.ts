@@ -18,3 +18,4 @@ export * from "./scrapeResult";
 export * from "./scrapeUrlBody";
 export * from "./updateSaveBody";
 export * from "./verdictJson";
+export * from "./verdictJsonType";

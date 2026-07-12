@@ -15,36 +15,95 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
-const SYSTEM_PROMPT = `You are a travel decision engine. Analyze the user's saved travel places and their question, then return a single JSON object with your verdict.
+const SHARED_JSON_SCHEMA = `{
+  "type": "choose" | "structure",
+  "verdict": "...",
+  "travelPatterns": ["pattern 1", "pattern 2", "pattern 3"],
+  "coreConflict": "...",
+  "whatYoureMissing": "...",
+  "whyThisFits": "...",
+  "tradeoffs": "...",
+  "avoidIf": ["condition 1", "condition 2"],
+  "nextMove": "...",
+  "anchors": ["anchor 1", "anchor 2", "anchor 3"],
+  "timingConfidence": "...",
+  "stopDoingThis": "...",
+  "usedSaveIds": [1, 2, 3]
+}`;
+
+const CHOOSE_SYSTEM_PROMPT = `You are a travel decision engine. The user is choosing between specific destinations or options. Pick exactly one and be direct about why the other(s) lose.
 
 You MUST return ONLY valid JSON — no prose, no markdown, no backticks, no wrapper text. Just the raw JSON object.
 
 The JSON must have exactly these fields:
 
-{
-  "verdict": "The destination or trip direction name — the big headline decision (e.g. 'Tokyo in April', 'Slow month in Lisbon')",
-  "travelPatterns": ["pattern 1", "pattern 2", "pattern 3"],
-  "coreConflict": "One sentence describing the tension in their saves",
-  "whatYoureMissing": "One sentence about an overlooked factor",
-  "whyThisFits": "2-3 sentences explaining why this verdict fits their pattern",
-  "tradeoffs": "2-3 sentences on what they give up with this choice",
-  "avoidIf": ["condition 1", "condition 2"],
-  "nextMove": "One concrete action to take today — specific, not generic",
-  "anchors": ["Area or district to base yourself", "Key zone or cluster 1", "Key zone or cluster 2"],
-  "timingConfidence": "One sentence like 'You won't regret this if you go now because...' or 'This fails if you go in peak summer because...'",
-  "stopDoingThis": "One constraint to protect the decision. E.g. 'Stop saving more places' or 'Don't compare more countries'",
-  "usedSaveIds": [1, 2, 3]
-}
+${SHARED_JSON_SCHEMA}
 
-RULES:
-- Be decisive. Do not hedge.
-- Do not give more than ONE recommendation.
-- Do not be generic — base everything on the actual saves provided.
+RULES FOR CHOOSE VERDICTS:
+- "type" must be "choose".
+- "verdict": Name the winning destination or option only — e.g. "Patagonia in March" or "Sicily over Tokyo".
+- "whyThisFits": Explain exactly why this option wins for this user's pattern. Be specific to their saves.
+- "tradeoffs": MUST name the losing option explicitly. Format: "Why not [losing option]: ..." followed by what you give up. This is not generic — it directly addresses the alternative.
+- "anchors": 3 areas or districts within the chosen destination to base yourself.
+- "avoidIf": Conditions under which the chosen option fails.
+- Be decisive. Do not hedge. Do not suggest both are great.
 - travelPatterns must have exactly 3 items.
 - anchors must have exactly 3 items.
-- usedSaveIds must list the IDs of saves you actually used in your analysis.
+- usedSaveIds must list the IDs of saves you actually used.
 - Do not use emojis.
 - Return ONLY the JSON object, nothing else.`;
+
+const STRUCTURE_SYSTEM_PROMPT = `You are a travel decision engine. The user wants to structure a trip — they have a destination (or cluster of places) and need an order of operations: which place first, how many days, why that sequence.
+
+You MUST return ONLY valid JSON — no prose, no markdown, no backticks, no wrapper text. Just the raw JSON object.
+
+The JSON must have exactly these fields:
+
+${SHARED_JSON_SCHEMA}
+
+RULES FOR STRUCTURE VERDICTS:
+- "type" must be "structure".
+- "verdict": Name the trip structure as a sequence — e.g. "Tokyo → Hakone → Kyoto" or "3 days Lisbon, 4 days Alentejo, 2 days Porto". This is the headline order of operations.
+- "whyThisFits": Explain the sequence logic — why this order, why these day counts, how it flows with the user's travel style from their saves.
+- "tradeoffs": Address what breaks if they deviate from this order — e.g. "Skipping Hakone collapses the pacing — you'll arrive in Kyoto too wired from Tokyo." Be specific.
+- "anchors": The 3 key zones, clusters, or bases within the structured itinerary (one per leg if possible).
+- "avoidIf": Conditions that would break this trip structure (wrong season, too few days, etc.).
+- "nextMove": One concrete booking or planning action that locks in the sequence.
+- Be decisive about the sequence. Do not offer alternatives.
+- travelPatterns must have exactly 3 items.
+- anchors must have exactly 3 items.
+- usedSaveIds must list the IDs of saves you actually used.
+- Do not use emojis.
+- Return ONLY the JSON object, nothing else.`;
+
+async function classifyQuestion(question: string): Promise<"choose" | "structure"> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_completion_tokens: 64,
+      messages: [
+        {
+          role: "system",
+          content: `Classify the travel question as either "choose" or "structure".
+- "choose": The user is deciding between two or more specific destinations or options (e.g. "Sicily vs Patagonia", "Should I go to Tokyo or Bali?").
+- "structure": The user wants to plan the sequence, pacing, or itinerary of a trip to a place or combination of places (e.g. "Tokyo + ryokan + 7 days", "How do I structure a Japan trip?", "Best order for Tokyo, Kyoto, Osaka?").
+
+Return ONLY a JSON object: { "type": "choose" } or { "type": "structure" }. No other text.`,
+        },
+        { role: "user", content: question },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const raw = response.choices[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(raw);
+    if (parsed.type === "choose" || parsed.type === "structure") {
+      return parsed.type;
+    }
+  } catch {
+  }
+  return "choose";
+}
 
 router.get("/", requireAuth, async (req: any, res) => {
   try {
@@ -99,13 +158,17 @@ router.post("/", requireAuth, async (req: any, res) => {
       return parts.join("\n");
     }).join("\n\n---\n\n");
 
+    const questionType = await classifyQuestion(question);
+    req.log.info({ questionType }, "Classified question type");
+
+    const systemPrompt = questionType === "structure" ? STRUCTURE_SYSTEM_PROMPT : CHOOSE_SYSTEM_PROMPT;
     const userPrompt = `User travel saves:\n${savesSnapshot}\n\nUser question:\n${question}`;
 
     const callModel = async () => openai.chat.completions.create({
       model: "gpt-5.4",
       max_completion_tokens: 8192,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },

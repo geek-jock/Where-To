@@ -46,7 +46,16 @@ export interface CreateSaveBody {
   scrapedImage?: string | null;
 }
 
+export type VerdictJsonType =
+  (typeof VerdictJsonType)[keyof typeof VerdictJsonType];
+
+export const VerdictJsonType = {
+  choose: "choose",
+  structure: "structure",
+} as const;
+
 export interface VerdictJson {
+  type: VerdictJsonType;
   verdict: string;
   /**
    * @minItems 3

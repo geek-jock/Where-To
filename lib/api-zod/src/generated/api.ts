@@ -161,6 +161,7 @@ export const ListDecisionsResponseItem = zod.object({
   result: zod.string(),
   resultJson: zod
     .object({
+      type: zod.enum(["choose", "structure"]),
       verdict: zod.string(),
       travelPatterns: zod
         .array(zod.string())
@@ -225,6 +226,7 @@ export const GetDecisionResponse = zod.object({
   result: zod.string(),
   resultJson: zod
     .object({
+      type: zod.enum(["choose", "structure"]),
       verdict: zod.string(),
       travelPatterns: zod
         .array(zod.string())

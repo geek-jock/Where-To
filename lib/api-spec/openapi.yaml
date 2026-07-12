@@ -394,6 +394,9 @@ components:
     VerdictJson:
       type: object
       properties:
+        type:
+          type: string
+          enum: [choose, structure]
         verdict:
           type: string
         travelPatterns:
@@ -431,6 +434,7 @@ components:
           items:
             type: integer
       required:
+        - type
         - verdict
         - travelPatterns
         - coreConflict
