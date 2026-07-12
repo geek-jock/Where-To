@@ -1,0 +1,103 @@
+**Where To**
+
+Where To is a travel decision engine for people who save everything and decide nothing.
+
+It is not a planning tool. It is not a social app. It is not an itinerary builder. It does one thing: it takes the places you've been quietly collecting and turns them into a single, opinionated answer when you finally need to commit.
+
+---
+
+**The problem it solves**
+
+Most people who love travel have the same problem. They save obsessively — links from Instagram, TikToks, articles, maps, things friends mention, things they find at 1am. The collection grows. The decision never happens. When it finally does, they ignore everything they saved and ask ChatGPT anyway.
+
+Where To exists for the moment between saving and going. It reads your library and makes the call you've been avoiding.
+
+---
+
+**How it works**
+
+You save places over time. Paste a link from anywhere — Instagram, TikTok, Google Maps, Airbnb, a travel article — or write a freeform note. Where To scrapes the source, strips all the noise, and generates a clean editorial save: a proper place name, a category, mood tags, and a location pinned to a map. No likes. No follower counts. No platform fingerprints. Just the place.
+
+When you have a decision to make, you go to Decide and type it in plain language. Not a form. Not a dropdown. Just what's actually in your head.
+
+*I really want to do a safari but I think doing one in Australia kinda doesn't hit the right vibe.*
+
+*We want to do Tokyo city and a ryokan, my boyfriend is a serious foodie, I'm more cultural, we have 7 days.*
+
+*I have one week in October. Should I do Sicily or Patagonia? I'm exhausted and need nature but also good food.*
+
+Where To reads the question, pulls the relevant saves silently, and returns a verdict.
+
+---
+
+**The verdict**
+
+Every verdict has the same structure, in this order:
+
+THE QUESTION — their words, verbatim, in an italic blockquote. The date underneath.
+
+THE VERDICT — one answer, large, in serif. No hedging.
+
+YOUR TRAVEL PATTERNS — two or three bullet observations about what this person consistently wants, read from their saves. Not categories. Not pie charts. Actual observations. *You want wildlife to feel immersive, not like a resort add-on. You care about emotional rightness of setting, not just ticking a location.*
+
+YOUR CORE CONFLICT — one sentence naming the tension underneath the question. *You like the comfort of the Australian lodge but you want the safari to feel geographically and culturally real.*
+
+WHAT YOU'RE MISSING — one insight they haven't said out loud. *You haven't separated "luxury wildlife stay" from "true safari destination" — and for you, they should not be the same compromise.*
+
+WHY THIS FITS YOU — a paragraph connecting the verdict to their patterns. Specific. No generic travel writing.
+
+TRADEOFFS — honest, unsentimental. What they give up with this choice.
+
+AVOID IF — two or three conditions where this verdict doesn't apply to them.
+
+ACTION PLAN — one concrete next move. Three anchor places to start planning from. A timing confidence note.
+
+STOP DOING THIS — one behaviour or assumption to drop. Red left border. Direct.
+
+At the bottom, in small text: *Based on your saves: [the saves the app actually used to generate this verdict.]*
+
+---
+
+**The two verdict types**
+
+Where To recognises two structurally different decisions and handles them differently.
+
+**Choose between options.** One person, two or more possibilities. The verdict picks one and explains why. The other option is addressed honestly in Tradeoffs.
+
+**Structure a trip.** One or more people trying to fit multiple modes, places, or experiences into one coherent trip. The verdict doesn't pick a destination — it returns an order of operations. Which thing first, how many days, what the pacing logic is, where the modes fit together. The Tokyo verdict is not *go to Tokyo.* It's *Tokyo first for three to four days, then Hakone for two nights, here's why that sequence works and what breaks if you try to mix them day by day.*
+
+---
+
+**Group trips**
+
+When two people are planning together, the decision has a different shape. It's not one person choosing. It's two people with different travel orientations trying to find a structure that genuinely satisfies both — not a compromise where both feel slightly shortchanged.
+
+Group trips work through a trip room. One person creates a trip — Tokyo July 2027 — and sends an invite link to the other person. Both saves are now visible to the trip. When either person asks a question inside that trip, the verdict draws from both libraries and addresses both people by name.
+
+The group verdict adds two sections:
+
+WHO GETS WHAT — a named breakdown. What this trip specifically gives each person, not generically but drawn from their actual saves and stated orientations.
+
+THE SEAM — the one moment, meal, place, or experience where both people are genuinely satisfied simultaneously. Not a compromise. The actual overlap. *Kaiseki dinner at the ryokan is the one moment that is serious food and serious cultural experience at the same time. That's your shared anchor.*
+
+At MVP, the second person doesn't need an account. The question can carry the context inline — *planning with my boyfriend who is a serious foodie* — and the verdict weights accordingly. Full dual-library merging comes later.
+
+---
+
+**History**
+
+Every verdict is saved to History. The question, the verdict, the date. Over time this becomes something more than a log — it becomes a record of how this person actually decides, what they keep choosing, what tensions keep appearing. The travel identity emerges from the pattern of decisions. It is never assigned by a quiz or a label. It is earned through use and readable only in retrospect.
+
+---
+
+**What it looks like**
+
+Off-white background. Muted black text. Olive and sand accents. Playfair Display serif for all headings, verdicts, and questions. Clean sans-serif for body text. The aesthetic is a travel journal, not an app. There are no engagement metrics anywhere in the product. No like counts, no saves counts displayed as social proof, no algorithmic signals of any kind. What you saved is private. What you decided is private. The only person Where To is trying to impress is you.
+
+---
+
+**What it is not**
+
+It is not a social feed. It is not a public profile. It is not a community of travellers sharing their trips. It is not an itinerary template. It is not a competitor to Google Maps or TripAdvisor. It does not surface other users' content. It does not gamify your saves or reward streaks or send you push notifications about places near you.
+
+It is a quiet tool for people who already know they want to go somewhere. They just need someone to finally tell them where.
