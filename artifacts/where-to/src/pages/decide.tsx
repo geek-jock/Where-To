@@ -82,10 +82,13 @@ export default function Decide() {
 
     try {
       const res = await selectSaves.mutateAsync({ data: { question } });
-      setSelectedSaveIds(res.saveIds);
+      // If AI returned nothing relevant, fall back to all saves (up to 10)
+      const ids = res.saveIds.length > 0 ? res.saveIds : saves.slice(0, 10).map(s => s.id);
+      setSelectedSaveIds(ids);
       setPhase("review");
     } catch {
-      toast({ title: "Couldn't select saves automatically", description: "You can add saves manually below.", variant: "destructive" });
+      // On error, pre-select all saves so the user can still proceed
+      setSelectedSaveIds(saves.slice(0, 10).map(s => s.id));
       setPhase("review");
     }
   };
