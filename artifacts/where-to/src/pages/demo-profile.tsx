@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "wouter";
-import { Compass, Loader2, MapPin, ArrowLeft } from "lucide-react";
+import { Compass, Loader2, ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VerdictDisplay } from "@/components/verdict-display";
-import { format } from "date-fns";
 import { useSignIn } from "@clerk/react/legacy";
 import type { VerdictJson } from "@workspace/api-client-react";
 
@@ -12,6 +11,8 @@ const API_BASE = `${basePath}/api`;
 
 interface DemoSave {
   id: number;
+  url: string | null;
+  content: string | null;
   scrapedTitle: string | null;
   scrapedDescription: string | null;
   placeName: string | null;
@@ -38,10 +39,28 @@ interface DemoProfile {
   decisions: DemoDecision[];
 }
 
+function getDomain(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (host === "maps.app.goo.gl") return "google maps";
+    if (host.startsWith("reddit.com")) return "reddit";
+    if (host.startsWith("instagram.com")) return "instagram";
+    if (host.startsWith("youtube.com")) return "youtube";
+    if (host.startsWith("airbnb.com")) return "airbnb";
+    if (host.startsWith("booking.com")) return "booking.com";
+    if (host.startsWith("alltrails.com")) return "alltrails";
+    return host;
+  } catch {
+    return null;
+  }
+}
+
 export default function DemoProfile() {
   const { profileId } = useParams<{ profileId: string }>();
   const [profile, setProfile] = useState<DemoProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"question" | "library">("question");
   const [activeDecisionId, setActiveDecisionId] = useState<number | null>(null);
   const { signIn, isLoaded } = useSignIn();
 
@@ -94,106 +113,77 @@ export default function DemoProfile() {
           <Link href="/demo" className="text-primary hover:underline text-sm">← Back to demo profiles</Link>
         </div>
       ) : (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-14">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-10 md:py-14">
 
-          {/* Back link */}
+          {/* Back */}
           <Link href="/demo" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
             <ArrowLeft className="h-3.5 w-3.5" />
             All demo profiles
           </Link>
 
-          <div className="grid md:grid-cols-[300px_1fr] gap-10">
+          {/* Profile card */}
+          <div className="flex items-start gap-4 mb-10">
+            <div className="h-12 w-12 bg-primary/15 flex items-center justify-center flex-shrink-0">
+              <span className="text-base font-bold text-primary">{profile.initials}</span>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">{profile.name}</p>
+              <p className="text-xs text-muted-foreground">{profile.travelStyle}</p>
+              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-xl">{profile.bio}</p>
+            </div>
+          </div>
 
-            {/* Sidebar — profile + saves + decision list */}
-            <aside className="space-y-8">
+          {/* Tabs */}
+          <div className="border-b border-border mb-8">
+            <div className="flex gap-0">
+              {(["question", "library"] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
+                    activeTab === tab
+                      ? "border-foreground text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab === "question"
+                    ? `Question · ${profile.decisions.length}`
+                    : `Library · ${profile.saves.length}`}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              {/* Profile card */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 bg-primary/15 flex items-center justify-center flex-shrink-0">
-                    <span className="text-base font-bold text-primary">{profile.initials}</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{profile.name}</p>
-                    <p className="text-xs text-muted-foreground">{profile.travelStyle}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
-              </div>
-
-              {/* Saves */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3" />
-                  Library — {profile.saves.length} saves
-                </p>
-                <div className="space-y-1">
-                  {profile.saves.map(save => (
-                    <div key={save.id} className="flex items-center gap-2 py-1.5">
-                      <span className="text-sm text-foreground">
-                        {save.scrapedTitle || save.placeName || "Save"}
-                      </span>
-                      {save.countryCode && (
-                        <span className="text-xs text-muted-foreground/60">{save.countryCode}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Decision list */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground/60">
-                  Decisions — {profile.decisions.length}
-                </p>
-                <div className="space-y-1">
-                  {profile.decisions.map(decision => (
+          {/* Question tab */}
+          {activeTab === "question" && (
+            <div className="space-y-8">
+              {/* Question selector */}
+              {profile.decisions.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {profile.decisions.map(d => (
                     <button
-                      key={decision.id}
-                      onClick={() => setActiveDecisionId(decision.id)}
-                      className={`w-full text-left px-3 py-2.5 space-y-0.5 transition-colors border ${
-                        activeDecisionId === decision.id
-                          ? "border-primary/40 bg-primary/5"
-                          : "border-transparent hover:bg-muted/50"
+                      key={d.id}
+                      onClick={() => setActiveDecisionId(d.id)}
+                      className={`px-3 py-1.5 text-xs border transition-colors text-left ${
+                        activeDecisionId === d.id
+                          ? "border-primary/50 bg-primary/5 text-foreground"
+                          : "border-border text-muted-foreground hover:text-foreground hover:border-border/80"
                       }`}
                     >
-                      <p className="text-xs text-muted-foreground/60">
-                        {format(new Date(decision.createdAt), "MMM d, yyyy")}
-                        {decision.resultJson?.type && (
-                          <span className="ml-2 uppercase tracking-wider text-[9px]">
-                            {decision.resultJson.type === "structure" ? "Structure" : "Choose"}
-                          </span>
-                        )}
-                      </p>
-                      {decision.resultJson?.verdict ? (
-                        <p className="text-sm font-serif text-foreground leading-snug">
-                          {decision.resultJson.verdict}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic truncate">
-                          {decision.question.slice(0, 60)}...
-                        </p>
-                      )}
+                      {d.resultJson?.verdict ?? d.question.slice(0, 50) + "…"}
                     </button>
                   ))}
                 </div>
-              </div>
+              )}
 
-            </aside>
-
-            {/* Main — active decision verdict */}
-            <div className="min-h-[400px]">
-              {!activeDecision ? (
-                <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-                  Select a decision to read the verdict.
-                </div>
-              ) : activeDecision.resultJson ? (
+              {/* Active verdict */}
+              {activeDecision?.resultJson ? (
                 <VerdictDisplay
                   question={activeDecision.question}
                   verdictJson={activeDecision.resultJson}
                   createdAt={activeDecision.createdAt}
                 />
-              ) : (
+              ) : activeDecision ? (
                 <div className="space-y-4 max-w-2xl">
                   <blockquote className="text-xl font-serif italic text-foreground border-l-2 border-primary pl-5 leading-snug">
                     {activeDecision.question}
@@ -202,13 +192,13 @@ export default function DemoProfile() {
                     {activeDecision.result}
                   </pre>
                 </div>
-              )}
+              ) : null}
 
-              {/* CTA at bottom of verdict */}
+              {/* CTA */}
               {activeDecision && (
-                <div className="mt-14 pt-8 border-t border-border flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+                <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
                   <p className="text-sm text-muted-foreground max-w-sm">
-                    This is a real AI verdict. Yours would be built from your own saves and travel patterns.
+                    This is a real AI verdict, built from {profile.name.split(" ")[0]}'s saves. Yours would come from your own.
                   </p>
                   <Button onClick={handleGoogleSignIn} disabled={!isLoaded}>
                     Start with your saves
@@ -216,8 +206,73 @@ export default function DemoProfile() {
                 </div>
               )}
             </div>
+          )}
 
-          </div>
+          {/* Library tab */}
+          {activeTab === "library" && (
+            <div className="space-y-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="pb-3 pr-6 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans">Place</th>
+                    <th className="pb-3 pr-6 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans">Note</th>
+                    <th className="pb-3 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans hidden md:table-cell">Source</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {profile.saves.map(save => {
+                    const domain = getDomain(save.url);
+                    return (
+                      <tr key={save.id} className="group">
+                        <td className="py-3.5 pr-6 align-top whitespace-nowrap">
+                          <span className="font-medium text-foreground">{save.placeName}</span>
+                          {save.countryCode && (
+                            <span className="text-muted-foreground/50 ml-1.5 text-xs">{save.countryCode}</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 pr-6 align-top max-w-xs">
+                          <p className="text-muted-foreground leading-relaxed">{save.content}</p>
+                          {save.tags && save.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {save.tags.slice(0, 3).map(tag => (
+                                <span key={tag} className="text-[10px] text-muted-foreground/50 border border-border/50 px-1.5 py-0.5">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3.5 align-top hidden md:table-cell">
+                          {save.url ? (
+                            <a
+                              href={save.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-primary transition-colors group-hover:text-muted-foreground"
+                            >
+                              {domain ?? save.url.slice(0, 30)}
+                              <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </a>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* CTA */}
+              <div className="pt-10 border-t border-border flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between mt-8">
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Save links like these — then ask Where To to decide.
+                </p>
+                <Button onClick={handleGoogleSignIn} disabled={!isLoaded}>
+                  Start with your saves
+                </Button>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
     </div>
