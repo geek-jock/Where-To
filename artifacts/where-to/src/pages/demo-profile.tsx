@@ -214,9 +214,8 @@ export default function DemoProfile() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left">
-                    <th className="pb-3 pr-6 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans">Place</th>
-                    <th className="pb-3 pr-6 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans">Note</th>
-                    <th className="pb-3 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans hidden md:table-cell">Source</th>
+                    <th className="pb-3 pr-6 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans w-32">Place</th>
+                    <th className="pb-3 pr-6 text-xs font-semibold tracking-widest uppercase text-muted-foreground/60 font-sans">Note &amp; Source</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -224,16 +223,34 @@ export default function DemoProfile() {
                     const domain = getDomain(save.url);
                     return (
                       <tr key={save.id} className="group">
-                        <td className="py-3.5 pr-6 align-top whitespace-nowrap">
-                          <span className="font-medium text-foreground">{save.placeName}</span>
+                        <td className="py-4 pr-6 align-top">
+                          <span className="font-medium text-foreground text-sm">{save.placeName}</span>
                           {save.countryCode && (
                             <span className="text-muted-foreground/50 ml-1.5 text-xs">{save.countryCode}</span>
                           )}
                         </td>
-                        <td className="py-3.5 pr-6 align-top max-w-xs">
-                          <p className="text-muted-foreground leading-relaxed">{save.content}</p>
+                        <td className="py-4 align-top">
+                          <p className="text-sm text-muted-foreground leading-relaxed mb-2">{save.content}</p>
+                          {save.url && (
+                            <a
+                              href={save.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-start gap-1.5 group/link max-w-sm"
+                            >
+                              <ExternalLink className="h-3 w-3 text-muted-foreground/40 group-hover/link:text-primary flex-shrink-0 mt-0.5 transition-colors" />
+                              <span className="text-xs leading-snug">
+                                <span className="text-foreground/80 group-hover/link:text-primary transition-colors line-clamp-2">
+                                  {save.scrapedTitle ?? domain ?? save.url}
+                                </span>
+                                {domain && save.scrapedTitle && (
+                                  <span className="block text-muted-foreground/50 mt-0.5">{domain}</span>
+                                )}
+                              </span>
+                            </a>
+                          )}
                           {save.tags && save.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
+                            <div className="flex flex-wrap gap-1 mt-2.5">
                               {save.tags.slice(0, 3).map(tag => (
                                 <span key={tag} className="text-[10px] text-muted-foreground/50 border border-border/50 px-1.5 py-0.5">
                                   {tag}
@@ -241,19 +258,6 @@ export default function DemoProfile() {
                               ))}
                             </div>
                           )}
-                        </td>
-                        <td className="py-3.5 align-top hidden md:table-cell">
-                          {save.url ? (
-                            <a
-                              href={save.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-primary transition-colors group-hover:text-muted-foreground"
-                            >
-                              {domain ?? save.url.slice(0, 30)}
-                              <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </a>
-                          ) : null}
                         </td>
                       </tr>
                     );
