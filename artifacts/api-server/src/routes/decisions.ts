@@ -79,7 +79,7 @@ RULES FOR STRUCTURE VERDICTS:
 async function classifyQuestion(question: string): Promise<"choose" | "structure"> {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       max_completion_tokens: 64,
       messages: [
         {
@@ -236,7 +236,7 @@ router.post("/select-saves", requireAuth, async (req: any, res): Promise<void> =
     }).join("\n");
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       max_completion_tokens: 256,
       messages: [
         {

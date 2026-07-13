@@ -141,7 +141,7 @@ router.post("/:id/tag", requireAuth, async (req: any, res) => {
       .filter(Boolean).join(" | ");
 
     const aiResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       max_completion_tokens: 120,
       messages: [
         {
@@ -200,7 +200,7 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
       .filter(Boolean).join(" | ");
 
     const aiResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       max_completion_tokens: 80,
       messages: [
         {

@@ -51,7 +51,7 @@ function cleanAndOrganizeDescription(raw: string): string {
 async function generateTitle(context: string): Promise<string | null> {
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       messages: [
         {
           role: "system",
@@ -81,7 +81,7 @@ Vibes: ${tagStr}
 Source URL: ${url}`;
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-5.4-mini",
     messages: [
       {
         role: "system",
