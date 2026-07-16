@@ -172,6 +172,8 @@ export interface GroupDecision {
   verdictJson?: GroupVerdictJson | null;
   assignedTo?: string | null;
   createdBy: string;
+  costPerPax?: string | null;
+  confirmationLink?: string | null;
   createdAt: string;
 }
 
@@ -204,6 +206,42 @@ export interface AssignDecisionBody {
   assignedTo: string;
 }
 
+export interface UpdateGroupDecisionMetaBody {
+  costPerPax?: string | null;
+  confirmationLink?: string | null;
+}
+
+export type TripOverviewDecision = GroupDecision & {
+  bookedByMember?: TripMember | null;
+  assignedMember?: TripMember | null;
+};
+
+export interface OverviewNotes {
+  content: string;
+  updatedAt?: string | null;
+}
+
+export interface TripOverview {
+  booked: TripOverviewDecision[];
+  needToBook: TripOverviewDecision[];
+  members: TripMember[];
+  notes: OverviewNotes;
+}
+
+export interface UpdateOverviewNotesBody {
+  content: string;
+}
+
+export interface TripNotification {
+  id: number;
+  userId: string;
+  tripId: number;
+  decisionId?: number | null;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface ScrapeResult {
   url: string;
   title?: string | null;
@@ -221,5 +259,9 @@ export type ListGroupDecisionsParams = {
 };
 
 export type GetGroupDecisionParams = {
+  invite?: string;
+};
+
+export type GetTripOverviewParams = {
   invite?: string;
 };

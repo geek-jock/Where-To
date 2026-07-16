@@ -16,5 +16,7 @@ export interface GroupDecision {
   verdictJson?: GroupVerdictJson | null;
   assignedTo?: string | null;
   createdBy: string;
+  costPerPax?: string | null;
+  confirmationLink?: string | null;
   createdAt: Date;
 }

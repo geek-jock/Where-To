@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   UserCheck,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -350,6 +351,25 @@ export default function TripDetail() {
             <CopyInviteLinkButton tripId={trip.id} inviteToken={trip.inviteToken} />
           )}
         </div>
+      </div>
+
+      {/* Overview link */}
+      <div className="border border-border bg-muted/20 p-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            Trip Overview
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            See all booked decisions, pending bookings, and practical notes in one place
+          </p>
+        </div>
+        <Link href={`/trips/${trip.id}/overview${isGuest && inviteToken ? `?invite=${inviteToken}` : ""}`}>
+          <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" data-testid="link-overview">
+            View overview
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">

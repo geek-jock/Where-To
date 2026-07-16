@@ -4,6 +4,7 @@ import { db, tripsTable, tripMembersTable, groupDecisionsTable } from "@workspac
 import { eq, and, inArray } from "drizzle-orm";
 import crypto from "crypto";
 import tripDecisionsRouter from "./trip-decisions";
+import tripOverviewRouter from "./trip-overview";
 
 const router = Router();
 
@@ -171,5 +172,6 @@ router.post("/:id/join", requireAuth, async (req: any, res) => {
 });
 
 router.use("/:id/decisions", tripDecisionsRouter);
+router.use("/:id", tripOverviewRouter);
 
 export default router;

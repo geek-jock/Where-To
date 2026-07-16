@@ -75,7 +75,7 @@ export const TagSaveResponse = zod.object({
 });
 
 /**
- * @summary Geocode a save using AI + Nominatim
+ * @summary Geocode a save
  */
 export const GeocodeSaveParams = zod.object({
   id: zod.coerce.number(),
@@ -99,7 +99,7 @@ export const GeocodeSaveResponse = zod.object({
 });
 
 /**
- * @summary Update editable fields of a save
+ * @summary Update a save
  */
 export const UpdateSaveParams = zod.object({
   id: zod.coerce.number(),
@@ -141,6 +141,13 @@ export const DeleteSaveParams = zod.object({
 
 export const DeleteSaveResponse = zod.object({
   success: zod.boolean(),
+});
+
+/**
+ * @summary Create a new AI travel decision
+ */
+export const CreateDecisionBody = zod.object({
+  question: zod.string(),
 });
 
 /**
@@ -186,14 +193,7 @@ export const ListDecisionsResponseItem = zod.object({
 export const ListDecisionsResponse = zod.array(ListDecisionsResponseItem);
 
 /**
- * @summary Generate a travel decision from saves and a question
- */
-export const CreateDecisionBody = zod.object({
-  question: zod.string(),
-});
-
-/**
- * @summary Get a single decision
+ * @summary Get a specific decision
  */
 export const GetDecisionParams = zod.object({
   id: zod.coerce.number(),
@@ -244,12 +244,8 @@ export const DeleteDecisionParams = zod.object({
   id: zod.coerce.number(),
 });
 
-export const DeleteDecisionResponse = zod.object({
-  success: zod.boolean(),
-});
-
 /**
- * @summary List trips for the current user
+ * @summary List all trips for the current user
  */
 export const ListTripsResponseItem = zod.object({
   id: zod.number(),
@@ -375,6 +371,8 @@ export const ListGroupDecisionsResponseItem = zod.object({
     .nullish(),
   assignedTo: zod.string().nullish(),
   createdBy: zod.string(),
+  costPerPax: zod.string().nullish(),
+  confirmationLink: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListGroupDecisionsResponse = zod.array(
@@ -453,6 +451,8 @@ export const GetGroupDecisionResponse = zod
       .nullish(),
     assignedTo: zod.string().nullish(),
     createdBy: zod.string(),
+    costPerPax: zod.string().nullish(),
+    confirmationLink: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   })
   .and(
@@ -552,6 +552,8 @@ export const RunGroupVerdictResponse = zod
       .nullish(),
     assignedTo: zod.string().nullish(),
     createdBy: zod.string(),
+    costPerPax: zod.string().nullish(),
+    confirmationLink: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   })
   .and(
@@ -643,6 +645,8 @@ export const AssignGroupDecisionResponse = zod
       .nullish(),
     assignedTo: zod.string().nullish(),
     createdBy: zod.string(),
+    costPerPax: zod.string().nullish(),
+    confirmationLink: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   })
   .and(
@@ -732,6 +736,8 @@ export const ConfirmGroupDecisionResponse = zod
       .nullish(),
     assignedTo: zod.string().nullish(),
     createdBy: zod.string(),
+    costPerPax: zod.string().nullish(),
+    confirmationLink: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   })
   .and(
@@ -759,6 +765,329 @@ export const ConfirmGroupDecisionResponse = zod
       ),
     }),
   );
+
+/**
+ * @summary Send an in-app nudge to the assignee (coordinator only)
+ */
+export const NudgeDecisionAssigneeParams = zod.object({
+  id: zod.coerce.number(),
+  decId: zod.coerce.number(),
+});
+
+/**
+ * @summary Update cost per pax and confirmation link (coordinator only)
+ */
+export const UpdateGroupDecisionMetaParams = zod.object({
+  id: zod.coerce.number(),
+  decId: zod.coerce.number(),
+});
+
+export const UpdateGroupDecisionMetaBody = zod.object({
+  costPerPax: zod.string().nullish(),
+  confirmationLink: zod.string().nullish(),
+});
+
+export const updateGroupDecisionMetaResponseVerdictJsonOneOneTravelPatternsMin = 3;
+export const updateGroupDecisionMetaResponseVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const updateGroupDecisionMetaResponseVerdictJsonOneOneAnchorsMin = 3;
+export const updateGroupDecisionMetaResponseVerdictJsonOneOneAnchorsMax = 3;
+
+export const UpdateGroupDecisionMetaResponse = zod.object({
+  id: zod.number(),
+  tripId: zod.number(),
+  question: zod.string(),
+  status: zod.enum(["undecided", "assigned", "done"]),
+  verdictJson: zod
+    .object({
+      type: zod.enum(["choose", "structure"]),
+      verdict: zod.string(),
+      travelPatterns: zod
+        .array(zod.string())
+        .min(updateGroupDecisionMetaResponseVerdictJsonOneOneTravelPatternsMin)
+        .max(updateGroupDecisionMetaResponseVerdictJsonOneOneTravelPatternsMax),
+      coreConflict: zod.string(),
+      whatYoureMissing: zod.string(),
+      whyThisFits: zod.string(),
+      tradeoffs: zod.string(),
+      avoidIf: zod.array(zod.string()),
+      nextMove: zod.string(),
+      anchors: zod
+        .array(zod.string())
+        .min(updateGroupDecisionMetaResponseVerdictJsonOneOneAnchorsMin)
+        .max(updateGroupDecisionMetaResponseVerdictJsonOneOneAnchorsMax),
+      timingConfidence: zod.string(),
+      stopDoingThis: zod.string(),
+      usedSaveIds: zod.array(zod.number()),
+    })
+    .and(
+      zod.object({
+        whoGetsWhat: zod.array(
+          zod.object({
+            userId: zod.string(),
+            memberName: zod.string(),
+            assignment: zod.string(),
+          }),
+        ),
+        theSeam: zod.string(),
+      }),
+    )
+    .nullish(),
+  assignedTo: zod.string().nullish(),
+  createdBy: zod.string(),
+  costPerPax: zod.string().nullish(),
+  confirmationLink: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Get trip overview (booked items, need-to-book, rough guide, notes)
+ */
+export const GetTripOverviewParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetTripOverviewQueryParams = zod.object({
+  invite: zod.coerce.string().optional(),
+});
+
+export const getTripOverviewResponseBookedItemOneVerdictJsonOneOneTravelPatternsMin = 3;
+export const getTripOverviewResponseBookedItemOneVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const getTripOverviewResponseBookedItemOneVerdictJsonOneOneAnchorsMin = 3;
+export const getTripOverviewResponseBookedItemOneVerdictJsonOneOneAnchorsMax = 3;
+
+export const getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneTravelPatternsMin = 3;
+export const getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneAnchorsMin = 3;
+export const getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneAnchorsMax = 3;
+
+export const GetTripOverviewResponse = zod.object({
+  booked: zod.array(
+    zod
+      .object({
+        id: zod.number(),
+        tripId: zod.number(),
+        question: zod.string(),
+        status: zod.enum(["undecided", "assigned", "done"]),
+        verdictJson: zod
+          .object({
+            type: zod.enum(["choose", "structure"]),
+            verdict: zod.string(),
+            travelPatterns: zod
+              .array(zod.string())
+              .min(
+                getTripOverviewResponseBookedItemOneVerdictJsonOneOneTravelPatternsMin,
+              )
+              .max(
+                getTripOverviewResponseBookedItemOneVerdictJsonOneOneTravelPatternsMax,
+              ),
+            coreConflict: zod.string(),
+            whatYoureMissing: zod.string(),
+            whyThisFits: zod.string(),
+            tradeoffs: zod.string(),
+            avoidIf: zod.array(zod.string()),
+            nextMove: zod.string(),
+            anchors: zod
+              .array(zod.string())
+              .min(
+                getTripOverviewResponseBookedItemOneVerdictJsonOneOneAnchorsMin,
+              )
+              .max(
+                getTripOverviewResponseBookedItemOneVerdictJsonOneOneAnchorsMax,
+              ),
+            timingConfidence: zod.string(),
+            stopDoingThis: zod.string(),
+            usedSaveIds: zod.array(zod.number()),
+          })
+          .and(
+            zod.object({
+              whoGetsWhat: zod.array(
+                zod.object({
+                  userId: zod.string(),
+                  memberName: zod.string(),
+                  assignment: zod.string(),
+                }),
+              ),
+              theSeam: zod.string(),
+            }),
+          )
+          .nullish(),
+        assignedTo: zod.string().nullish(),
+        createdBy: zod.string(),
+        costPerPax: zod.string().nullish(),
+        confirmationLink: zod.string().nullish(),
+        createdAt: zod.coerce.date(),
+      })
+      .and(
+        zod.object({
+          bookedByMember: zod
+            .object({
+              tripId: zod.number(),
+              userId: zod.string(),
+              role: zod.string(),
+              displayName: zod.string().nullish(),
+              avatarUrl: zod.string().nullish(),
+              joinedAt: zod.coerce.date(),
+            })
+            .nullish(),
+          assignedMember: zod
+            .object({
+              tripId: zod.number(),
+              userId: zod.string(),
+              role: zod.string(),
+              displayName: zod.string().nullish(),
+              avatarUrl: zod.string().nullish(),
+              joinedAt: zod.coerce.date(),
+            })
+            .nullish(),
+        }),
+      ),
+  ),
+  needToBook: zod.array(
+    zod
+      .object({
+        id: zod.number(),
+        tripId: zod.number(),
+        question: zod.string(),
+        status: zod.enum(["undecided", "assigned", "done"]),
+        verdictJson: zod
+          .object({
+            type: zod.enum(["choose", "structure"]),
+            verdict: zod.string(),
+            travelPatterns: zod
+              .array(zod.string())
+              .min(
+                getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneTravelPatternsMin,
+              )
+              .max(
+                getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneTravelPatternsMax,
+              ),
+            coreConflict: zod.string(),
+            whatYoureMissing: zod.string(),
+            whyThisFits: zod.string(),
+            tradeoffs: zod.string(),
+            avoidIf: zod.array(zod.string()),
+            nextMove: zod.string(),
+            anchors: zod
+              .array(zod.string())
+              .min(
+                getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneAnchorsMin,
+              )
+              .max(
+                getTripOverviewResponseNeedToBookItemOneVerdictJsonOneOneAnchorsMax,
+              ),
+            timingConfidence: zod.string(),
+            stopDoingThis: zod.string(),
+            usedSaveIds: zod.array(zod.number()),
+          })
+          .and(
+            zod.object({
+              whoGetsWhat: zod.array(
+                zod.object({
+                  userId: zod.string(),
+                  memberName: zod.string(),
+                  assignment: zod.string(),
+                }),
+              ),
+              theSeam: zod.string(),
+            }),
+          )
+          .nullish(),
+        assignedTo: zod.string().nullish(),
+        createdBy: zod.string(),
+        costPerPax: zod.string().nullish(),
+        confirmationLink: zod.string().nullish(),
+        createdAt: zod.coerce.date(),
+      })
+      .and(
+        zod.object({
+          bookedByMember: zod
+            .object({
+              tripId: zod.number(),
+              userId: zod.string(),
+              role: zod.string(),
+              displayName: zod.string().nullish(),
+              avatarUrl: zod.string().nullish(),
+              joinedAt: zod.coerce.date(),
+            })
+            .nullish(),
+          assignedMember: zod
+            .object({
+              tripId: zod.number(),
+              userId: zod.string(),
+              role: zod.string(),
+              displayName: zod.string().nullish(),
+              avatarUrl: zod.string().nullish(),
+              joinedAt: zod.coerce.date(),
+            })
+            .nullish(),
+        }),
+      ),
+  ),
+  members: zod.array(
+    zod.object({
+      tripId: zod.number(),
+      userId: zod.string(),
+      role: zod.string(),
+      displayName: zod.string().nullish(),
+      avatarUrl: zod.string().nullish(),
+      joinedAt: zod.coerce.date(),
+    }),
+  ),
+  notes: zod.object({
+    content: zod.string(),
+    updatedAt: zod.coerce.date().nullish(),
+  }),
+});
+
+/**
+ * @summary Update practical notes for the trip (coordinator only)
+ */
+export const UpdateTripOverviewNotesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateTripOverviewNotesBody = zod.object({
+  content: zod.string(),
+});
+
+export const UpdateTripOverviewNotesResponse = zod.object({
+  content: zod.string(),
+  updatedAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * @summary Get notifications for current user in this trip
+ */
+export const GetTripNotificationsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetTripNotificationsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  tripId: zod.number(),
+  decisionId: zod.number().nullish(),
+  message: zod.string(),
+  read: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+export const GetTripNotificationsResponse = zod.array(
+  GetTripNotificationsResponseItem,
+);
+
+/**
+ * @summary Mark all notifications as read for current user in this trip
+ */
+export const MarkTripNotificationsReadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkTripNotificationsReadResponse = zod.object({
+  success: zod.boolean(),
+});
 
 /**
  * @summary Join a trip via invite token

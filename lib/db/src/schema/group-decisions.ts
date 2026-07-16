@@ -26,6 +26,8 @@ export const groupDecisionsTable = pgTable("group_decisions", {
   verdictJson: jsonb("verdict_json").$type<GroupVerdictJson>(),
   assignedTo: text("assigned_to"),
   createdBy: text("created_by").notNull(),
+  costPerPax: text("cost_per_pax"),
+  confirmationLink: text("confirmation_link"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

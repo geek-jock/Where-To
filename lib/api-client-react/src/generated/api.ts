@@ -27,18 +27,24 @@ import type {
   DecisionComment,
   DeleteResult,
   GetGroupDecisionParams,
+  GetTripOverviewParams,
   GetTripParams,
   GroupDecision,
   GroupDecisionDetail,
   HealthStatus,
   JoinTripBody,
   ListGroupDecisionsParams,
+  OverviewNotes,
   Save,
   ScrapeResult,
   ScrapeUrlBody,
   TagSaveBody,
   Trip,
   TripDetail,
+  TripNotification,
+  TripOverview,
+  UpdateGroupDecisionMetaBody,
+  UpdateOverviewNotesBody,
   UpdateSaveBody,
 } from "./api.schemas";
 
@@ -366,7 +372,7 @@ export const useTagSave = <
 };
 
 /**
- * @summary Geocode a save using AI + Nominatim
+ * @summary Geocode a save
  */
 export const getGeocodeSaveUrl = (id: number) => {
   return `/api/saves/${id}/geocode`;
@@ -427,7 +433,7 @@ export type GeocodeSaveMutationResult = NonNullable<
 export type GeocodeSaveMutationError = ErrorType<unknown>;
 
 /**
- * @summary Geocode a save using AI + Nominatim
+ * @summary Geocode a save
  */
 export const useGeocodeSave = <
   TError = ErrorType<unknown>,
@@ -450,7 +456,7 @@ export const useGeocodeSave = <
 };
 
 /**
- * @summary Update editable fields of a save
+ * @summary Update a save
  */
 export const getUpdateSaveUrl = (id: number) => {
   return `/api/saves/${id}`;
@@ -514,7 +520,7 @@ export type UpdateSaveMutationBody = BodyType<UpdateSaveBody>;
 export type UpdateSaveMutationError = ErrorType<unknown>;
 
 /**
- * @summary Update editable fields of a save
+ * @summary Update a save
  */
 export const useUpdateSave = <
   TError = ErrorType<unknown>,
@@ -621,6 +627,92 @@ export const useDeleteSave = <
 };
 
 /**
+ * @summary Create a new AI travel decision
+ */
+export const getCreateDecisionUrl = () => {
+  return `/api/decisions`;
+};
+
+export const createDecision = async (
+  createDecisionBody: CreateDecisionBody,
+  options?: RequestInit,
+): Promise<Decision> => {
+  return customFetch<Decision>(getCreateDecisionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDecisionBody),
+  });
+};
+
+export const getCreateDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDecision>>,
+    TError,
+    { data: BodyType<CreateDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDecision>>,
+  TError,
+  { data: BodyType<CreateDecisionBody> },
+  TContext
+> => {
+  const mutationKey = ["createDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDecision>>,
+    { data: BodyType<CreateDecisionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDecision(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDecision>>
+>;
+export type CreateDecisionMutationBody = BodyType<CreateDecisionBody>;
+export type CreateDecisionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new AI travel decision
+ */
+export const useCreateDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDecision>>,
+    TError,
+    { data: BodyType<CreateDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDecision>>,
+  TError,
+  { data: BodyType<CreateDecisionBody> },
+  TContext
+> => {
+  return useMutation(getCreateDecisionMutationOptions(options));
+};
+
+/**
  * @summary List all decisions for the current user
  */
 export const getListDecisionsUrl = () => {
@@ -696,93 +788,7 @@ export function useListDecisions<
 }
 
 /**
- * @summary Generate a travel decision from saves and a question
- */
-export const getCreateDecisionUrl = () => {
-  return `/api/decisions`;
-};
-
-export const createDecision = async (
-  createDecisionBody: CreateDecisionBody,
-  options?: RequestInit,
-): Promise<Decision> => {
-  return customFetch<Decision>(getCreateDecisionUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createDecisionBody),
-  });
-};
-
-export const getCreateDecisionMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createDecision>>,
-    TError,
-    { data: BodyType<CreateDecisionBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof createDecision>>,
-  TError,
-  { data: BodyType<CreateDecisionBody> },
-  TContext
-> => {
-  const mutationKey = ["createDecision"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createDecision>>,
-    { data: BodyType<CreateDecisionBody> }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return createDecision(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type CreateDecisionMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createDecision>>
->;
-export type CreateDecisionMutationBody = BodyType<CreateDecisionBody>;
-export type CreateDecisionMutationError = ErrorType<unknown>;
-
-/**
- * @summary Generate a travel decision from saves and a question
- */
-export const useCreateDecision = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createDecision>>,
-    TError,
-    { data: BodyType<CreateDecisionBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof createDecision>>,
-  TError,
-  { data: BodyType<CreateDecisionBody> },
-  TContext
-> => {
-  return useMutation(getCreateDecisionMutationOptions(options));
-};
-
-/**
- * @summary Get a single decision
+ * @summary Get a specific decision
  */
 export const getGetDecisionUrl = (id: number) => {
   return `/api/decisions/${id}`;
@@ -842,7 +848,7 @@ export type GetDecisionQueryResult = NonNullable<
 export type GetDecisionQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get a single decision
+ * @summary Get a specific decision
  */
 
 export function useGetDecision<
@@ -878,8 +884,8 @@ export const getDeleteDecisionUrl = (id: number) => {
 export const deleteDecision = async (
   id: number,
   options?: RequestInit,
-): Promise<DeleteResult> => {
-  return customFetch<DeleteResult>(getDeleteDecisionUrl(id), {
+): Promise<void> => {
+  return customFetch<void>(getDeleteDecisionUrl(id), {
     ...options,
     method: "DELETE",
   });
@@ -953,7 +959,7 @@ export const useDeleteDecision = <
 };
 
 /**
- * @summary List trips for the current user
+ * @summary List all trips for the current user
  */
 export const getListTripsUrl = () => {
   return `/api/trips`;
@@ -998,7 +1004,7 @@ export type ListTripsQueryResult = NonNullable<
 export type ListTripsQueryError = ErrorType<unknown>;
 
 /**
- * @summary List trips for the current user
+ * @summary List all trips for the current user
  */
 
 export function useListTrips<
@@ -1868,6 +1874,549 @@ export const useConfirmGroupDecision = <
   TContext
 > => {
   return useMutation(getConfirmGroupDecisionMutationOptions(options));
+};
+
+/**
+ * @summary Send an in-app nudge to the assignee (coordinator only)
+ */
+export const getNudgeDecisionAssigneeUrl = (id: number, decId: number) => {
+  return `/api/trips/${id}/decisions/${decId}/nudge`;
+};
+
+export const nudgeDecisionAssignee = async (
+  id: number,
+  decId: number,
+  options?: RequestInit,
+): Promise<TripNotification> => {
+  return customFetch<TripNotification>(getNudgeDecisionAssigneeUrl(id, decId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getNudgeDecisionAssigneeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof nudgeDecisionAssignee>>,
+    TError,
+    { id: number; decId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof nudgeDecisionAssignee>>,
+  TError,
+  { id: number; decId: number },
+  TContext
+> => {
+  const mutationKey = ["nudgeDecisionAssignee"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof nudgeDecisionAssignee>>,
+    { id: number; decId: number }
+  > = (props) => {
+    const { id, decId } = props ?? {};
+
+    return nudgeDecisionAssignee(id, decId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type NudgeDecisionAssigneeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof nudgeDecisionAssignee>>
+>;
+
+export type NudgeDecisionAssigneeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Send an in-app nudge to the assignee (coordinator only)
+ */
+export const useNudgeDecisionAssignee = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof nudgeDecisionAssignee>>,
+    TError,
+    { id: number; decId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof nudgeDecisionAssignee>>,
+  TError,
+  { id: number; decId: number },
+  TContext
+> => {
+  return useMutation(getNudgeDecisionAssigneeMutationOptions(options));
+};
+
+/**
+ * @summary Update cost per pax and confirmation link (coordinator only)
+ */
+export const getUpdateGroupDecisionMetaUrl = (id: number, decId: number) => {
+  return `/api/trips/${id}/decisions/${decId}/meta`;
+};
+
+export const updateGroupDecisionMeta = async (
+  id: number,
+  decId: number,
+  updateGroupDecisionMetaBody: UpdateGroupDecisionMetaBody,
+  options?: RequestInit,
+): Promise<GroupDecision> => {
+  return customFetch<GroupDecision>(getUpdateGroupDecisionMetaUrl(id, decId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateGroupDecisionMetaBody),
+  });
+};
+
+export const getUpdateGroupDecisionMetaMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGroupDecisionMeta>>,
+    TError,
+    { id: number; decId: number; data: BodyType<UpdateGroupDecisionMetaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateGroupDecisionMeta>>,
+  TError,
+  { id: number; decId: number; data: BodyType<UpdateGroupDecisionMetaBody> },
+  TContext
+> => {
+  const mutationKey = ["updateGroupDecisionMeta"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateGroupDecisionMeta>>,
+    { id: number; decId: number; data: BodyType<UpdateGroupDecisionMetaBody> }
+  > = (props) => {
+    const { id, decId, data } = props ?? {};
+
+    return updateGroupDecisionMeta(id, decId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateGroupDecisionMetaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateGroupDecisionMeta>>
+>;
+export type UpdateGroupDecisionMetaMutationBody =
+  BodyType<UpdateGroupDecisionMetaBody>;
+export type UpdateGroupDecisionMetaMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update cost per pax and confirmation link (coordinator only)
+ */
+export const useUpdateGroupDecisionMeta = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGroupDecisionMeta>>,
+    TError,
+    { id: number; decId: number; data: BodyType<UpdateGroupDecisionMetaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateGroupDecisionMeta>>,
+  TError,
+  { id: number; decId: number; data: BodyType<UpdateGroupDecisionMetaBody> },
+  TContext
+> => {
+  return useMutation(getUpdateGroupDecisionMetaMutationOptions(options));
+};
+
+/**
+ * @summary Get trip overview (booked items, need-to-book, rough guide, notes)
+ */
+export const getGetTripOverviewUrl = (
+  id: number,
+  params?: GetTripOverviewParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/trips/${id}/overview?${stringifiedParams}`
+    : `/api/trips/${id}/overview`;
+};
+
+export const getTripOverview = async (
+  id: number,
+  params?: GetTripOverviewParams,
+  options?: RequestInit,
+): Promise<TripOverview> => {
+  return customFetch<TripOverview>(getGetTripOverviewUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTripOverviewQueryKey = (
+  id: number,
+  params?: GetTripOverviewParams,
+) => {
+  return [`/api/trips/${id}/overview`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetTripOverviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTripOverview>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetTripOverviewParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTripOverview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTripOverviewQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTripOverview>>> = ({
+    signal,
+  }) => getTripOverview(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTripOverview>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTripOverviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTripOverview>>
+>;
+export type GetTripOverviewQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get trip overview (booked items, need-to-book, rough guide, notes)
+ */
+
+export function useGetTripOverview<
+  TData = Awaited<ReturnType<typeof getTripOverview>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetTripOverviewParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTripOverview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTripOverviewQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update practical notes for the trip (coordinator only)
+ */
+export const getUpdateTripOverviewNotesUrl = (id: number) => {
+  return `/api/trips/${id}/overview/notes`;
+};
+
+export const updateTripOverviewNotes = async (
+  id: number,
+  updateOverviewNotesBody: UpdateOverviewNotesBody,
+  options?: RequestInit,
+): Promise<OverviewNotes> => {
+  return customFetch<OverviewNotes>(getUpdateTripOverviewNotesUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateOverviewNotesBody),
+  });
+};
+
+export const getUpdateTripOverviewNotesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTripOverviewNotes>>,
+    TError,
+    { id: number; data: BodyType<UpdateOverviewNotesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateTripOverviewNotes>>,
+  TError,
+  { id: number; data: BodyType<UpdateOverviewNotesBody> },
+  TContext
+> => {
+  const mutationKey = ["updateTripOverviewNotes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateTripOverviewNotes>>,
+    { id: number; data: BodyType<UpdateOverviewNotesBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateTripOverviewNotes(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateTripOverviewNotesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateTripOverviewNotes>>
+>;
+export type UpdateTripOverviewNotesMutationBody =
+  BodyType<UpdateOverviewNotesBody>;
+export type UpdateTripOverviewNotesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update practical notes for the trip (coordinator only)
+ */
+export const useUpdateTripOverviewNotes = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTripOverviewNotes>>,
+    TError,
+    { id: number; data: BodyType<UpdateOverviewNotesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateTripOverviewNotes>>,
+  TError,
+  { id: number; data: BodyType<UpdateOverviewNotesBody> },
+  TContext
+> => {
+  return useMutation(getUpdateTripOverviewNotesMutationOptions(options));
+};
+
+/**
+ * @summary Get notifications for current user in this trip
+ */
+export const getGetTripNotificationsUrl = (id: number) => {
+  return `/api/trips/${id}/notifications`;
+};
+
+export const getTripNotifications = async (
+  id: number,
+  options?: RequestInit,
+): Promise<TripNotification[]> => {
+  return customFetch<TripNotification[]>(getGetTripNotificationsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTripNotificationsQueryKey = (id: number) => {
+  return [`/api/trips/${id}/notifications`] as const;
+};
+
+export const getGetTripNotificationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTripNotifications>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTripNotifications>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTripNotificationsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTripNotifications>>
+  > = ({ signal }) => getTripNotifications(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTripNotifications>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTripNotificationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTripNotifications>>
+>;
+export type GetTripNotificationsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get notifications for current user in this trip
+ */
+
+export function useGetTripNotifications<
+  TData = Awaited<ReturnType<typeof getTripNotifications>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTripNotifications>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTripNotificationsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark all notifications as read for current user in this trip
+ */
+export const getMarkTripNotificationsReadUrl = (id: number) => {
+  return `/api/trips/${id}/notifications/read-all`;
+};
+
+export const markTripNotificationsRead = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeleteResult> => {
+  return customFetch<DeleteResult>(getMarkTripNotificationsReadUrl(id), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getMarkTripNotificationsReadMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markTripNotificationsRead>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markTripNotificationsRead>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["markTripNotificationsRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markTripNotificationsRead>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return markTripNotificationsRead(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkTripNotificationsReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markTripNotificationsRead>>
+>;
+
+export type MarkTripNotificationsReadMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark all notifications as read for current user in this trip
+ */
+export const useMarkTripNotificationsRead = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markTripNotificationsRead>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markTripNotificationsRead>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getMarkTripNotificationsReadMutationOptions(options));
 };
 
 /**

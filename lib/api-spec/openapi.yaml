@@ -100,7 +100,7 @@ paths:
     post:
       operationId: geocodeSave
       tags: [saves]
-      summary: Geocode a save using AI + Nominatim
+      summary: Geocode a save
       security:
         - clerkAuth: []
       parameters:
@@ -121,7 +121,7 @@ paths:
     patch:
       operationId: updateSave
       tags: [saves]
-      summary: Update editable fields of a save
+      summary: Update a save
       security:
         - clerkAuth: []
       parameters:
@@ -164,25 +164,10 @@ paths:
                 $ref: "#/components/schemas/DeleteResult"
 
   /decisions:
-    get:
-      operationId: listDecisions
-      tags: [decisions]
-      summary: List all decisions for the current user
-      security:
-        - clerkAuth: []
-      responses:
-        "200":
-          description: List of decisions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Decision"
     post:
       operationId: createDecision
       tags: [decisions]
-      summary: Generate a travel decision from saves and a question
+      summary: Create a new AI travel decision
       security:
         - clerkAuth: []
       requestBody:
@@ -198,12 +183,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Decision"
+    get:
+      operationId: listDecisions
+      tags: [decisions]
+      summary: List all decisions for the current user
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Decision"
 
   /decisions/{id}:
     get:
       operationId: getDecision
       tags: [decisions]
-      summary: Get a single decision
+      summary: Get a specific decision
       security:
         - clerkAuth: []
       parameters:
@@ -214,7 +214,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: Decision
+          description: Decision detail
           content:
             application/json:
               schema:
@@ -232,18 +232,14 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
-          description: Deleted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DeleteResult"
+        "204":
+          description: Decision deleted
 
   /trips:
     get:
       operationId: listTrips
       tags: [trips]
-      summary: List trips for the current user
+      summary: List all trips for the current user
       security:
         - clerkAuth: []
       responses:
@@ -494,6 +490,159 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GroupDecisionDetail"
+
+  /trips/{id}/decisions/{decId}/nudge:
+    post:
+      operationId: nudgeDecisionAssignee
+      tags: [trips]
+      summary: Send an in-app nudge to the assignee (coordinator only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: decId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Notification created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripNotification"
+
+  /trips/{id}/decisions/{decId}/meta:
+    patch:
+      operationId: updateGroupDecisionMeta
+      tags: [trips]
+      summary: Update cost per pax and confirmation link (coordinator only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: decId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupDecisionMetaBody"
+      responses:
+        "200":
+          description: Updated decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDecision"
+
+  /trips/{id}/overview:
+    get:
+      operationId: getTripOverview
+      tags: [trips]
+      summary: Get trip overview (booked items, need-to-book, rough guide, notes)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: invite
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Trip overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripOverview"
+
+  /trips/{id}/overview/notes:
+    patch:
+      operationId: updateTripOverviewNotes
+      tags: [trips]
+      summary: Update practical notes for the trip (coordinator only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOverviewNotesBody"
+      responses:
+        "200":
+          description: Updated notes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OverviewNotes"
+
+  /trips/{id}/notifications:
+    get:
+      operationId: getTripNotifications
+      tags: [trips]
+      summary: Get notifications for current user in this trip
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TripNotification"
+
+  /trips/{id}/notifications/read-all:
+    patch:
+      operationId: markTripNotificationsRead
+      tags: [trips]
+      summary: Mark all notifications as read for current user in this trip
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
 
   /trips/{id}/join:
     post:
@@ -932,6 +1081,12 @@ components:
           nullable: true
         createdBy:
           type: string
+        costPerPax:
+          type: string
+          nullable: true
+        confirmationLink:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1016,6 +1171,100 @@ components:
           type: string
       required:
         - assignedTo
+
+    UpdateGroupDecisionMetaBody:
+      type: object
+      properties:
+        costPerPax:
+          type: string
+          nullable: true
+        confirmationLink:
+          type: string
+          nullable: true
+
+    TripOverviewDecision:
+      allOf:
+        - $ref: "#/components/schemas/GroupDecision"
+        - type: object
+          properties:
+            bookedByMember:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/TripMember"
+            assignedMember:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/TripMember"
+
+    OverviewNotes:
+      type: object
+      properties:
+        content:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - content
+
+    TripOverview:
+      type: object
+      properties:
+        booked:
+          type: array
+          items:
+            $ref: "#/components/schemas/TripOverviewDecision"
+        needToBook:
+          type: array
+          items:
+            $ref: "#/components/schemas/TripOverviewDecision"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/TripMember"
+        notes:
+          $ref: "#/components/schemas/OverviewNotes"
+      required:
+        - booked
+        - needToBook
+        - members
+        - notes
+
+    UpdateOverviewNotesBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    TripNotification:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        tripId:
+          type: integer
+        decisionId:
+          type: integer
+          nullable: true
+        message:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - tripId
+        - message
+        - read
+        - createdAt
 
     ScrapeResult:
       type: object
