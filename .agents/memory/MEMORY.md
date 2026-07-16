@@ -1,0 +1,2 @@
+- [Clerk Expo Setup](clerk-expo-setup.md) — @clerk/clerk-expo requires expo-auth-session and expo-secure-store; pass CLERK_PUBLISHABLE_KEY via dev script as EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY.
+- [Expo API Client Auth](expo-api-client-auth.md) — setAuthTokenGetter must be called inside a component wrapped by ClerkProvider; use useEffect with useAuth().getToken.

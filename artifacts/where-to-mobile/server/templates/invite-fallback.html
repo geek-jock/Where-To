@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Trip Invitation — Where To</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f5f3ee;
+        color: #252218;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .card {
+        background: #f9f7f4;
+        border: 1px solid #d9d5cb;
+        padding: 40px 32px;
+        max-width: 400px;
+        width: 100%;
+        margin: 20px;
+      }
+      .badge {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: #7c8a42;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+      .badge svg { color: #f5f3ee; }
+      h1 { font-size: 24px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.5px; }
+      .eyebrow {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: #6e6960;
+        margin-bottom: 4px;
+      }
+      p { font-size: 14px; color: #6e6960; line-height: 1.6; margin: 12px 0 24px; }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        font-size: 15px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+      .btn-primary { background: #7c8a42; color: #f5f3ee; }
+      .btn-secondary {
+        background: transparent;
+        color: #252218;
+        border: 1px solid #d9d5cb;
+      }
+      .btn:hover { opacity: 0.85; }
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 16px 0;
+        color: #6e6960;
+        font-size: 12px;
+      }
+      .divider::before, .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #d9d5cb;
+      }
+      .app-link {
+        font-size: 12px;
+        text-align: center;
+        color: #6e6960;
+        margin-top: 16px;
+      }
+      .app-link a { color: #7c8a42; text-decoration: none; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+      </div>
+      <div class="eyebrow">Trip Invitation</div>
+      <h1 id="trip-name">You're Invited</h1>
+      <p>
+        You've been invited to collaborate on a trip in Where To — where groups make travel decisions together.
+        Sign in or create an account to join and participate.
+      </p>
+
+      <a id="signin-link" href="WEB_APP_URL_PLACEHOLDER/sign-in" class="btn btn-primary">Sign In to Join</a>
+      <a id="signup-link" href="WEB_APP_URL_PLACEHOLDER/sign-in" class="btn btn-secondary">Create Account</a>
+
+      <div class="divider">or open in the app</div>
+
+      <a id="app-link" href="#" class="btn btn-secondary" onclick="openApp(event)">Open in Where To App</a>
+
+      <p class="app-link">
+        Don't have the app?
+        <a href="WEB_APP_URL_PLACEHOLDER">Learn more about Where To</a>
+      </p>
+    </div>
+
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const tripId = params.get("tripId");
+        const token = params.get("token");
+        const webAppUrl = "WEB_APP_URL_PLACEHOLDER";
+
+        if (tripId && token) {
+          const inviteQuery = "?tripId=" + encodeURIComponent(tripId) + "&token=" + encodeURIComponent(token);
+
+          document.getElementById("signin-link").href = webAppUrl + "/sign-in" + inviteQuery;
+          document.getElementById("signup-link").href = webAppUrl + "/sign-in" + inviteQuery;
+          document.getElementById("app-link").href = "where-to-mobile://invite" + inviteQuery;
+        }
+
+        window.openApp = function (e) {
+          e.preventDefault();
+          const tripId = params.get("tripId");
+          const token = params.get("token");
+          if (tripId && token) {
+            const appUrl = "where-to-mobile://invite?tripId=" + encodeURIComponent(tripId) + "&token=" + encodeURIComponent(token);
+            window.location.href = appUrl;
+            setTimeout(function () {
+              document.getElementById("app-link").textContent = "App not installed — try sign in above";
+            }, 2000);
+          }
+        };
+      })();
+    </script>
+  </body>
+</html>

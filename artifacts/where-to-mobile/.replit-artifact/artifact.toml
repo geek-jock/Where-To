@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "Where To — Mobile"
+version = "1.0.0"
+id = "artifacts/where-to-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/mobile/" ]
+localPort = 25556
+
+[services.development]
+run = "pnpm --filter @workspace/where-to-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/where-to-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/where-to-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "25556"
+BASE_PATH = "/mobile/"
