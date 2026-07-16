@@ -21,11 +21,10 @@ export const HealthCheckResponse = zod.object({
 export const ListSavesResponseItem = zod.object({
   id: zod.number(),
   userId: zod.string(),
-  content: zod.string(),
+  note: zod.string().nullish(),
   url: zod.string().nullish(),
   scrapedTitle: zod.string().nullish(),
-  scrapedDescription: zod.string().nullish(),
-  scrapedImage: zod.string().nullish(),
+  description: zod.string().nullish(),
   placeName: zod.string().nullish(),
   countryCode: zod.string().nullish(),
   lat: zod.number().nullish(),
@@ -41,11 +40,10 @@ export const ListSavesResponse = zod.array(ListSavesResponseItem);
  * @summary Add a new travel save
  */
 export const CreateSaveBody = zod.object({
-  content: zod.string(),
+  note: zod.string().nullish(),
   url: zod.string().nullish(),
   scrapedTitle: zod.string().nullish(),
-  scrapedDescription: zod.string().nullish(),
-  scrapedImage: zod.string().nullish(),
+  description: zod.string().nullish(),
 });
 
 /**
@@ -55,14 +53,17 @@ export const TagSaveParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const TagSaveBody = zod.object({
+  extractedText: zod.string().nullish(),
+});
+
 export const TagSaveResponse = zod.object({
   id: zod.number(),
   userId: zod.string(),
-  content: zod.string(),
+  note: zod.string().nullish(),
   url: zod.string().nullish(),
   scrapedTitle: zod.string().nullish(),
-  scrapedDescription: zod.string().nullish(),
-  scrapedImage: zod.string().nullish(),
+  description: zod.string().nullish(),
   placeName: zod.string().nullish(),
   countryCode: zod.string().nullish(),
   lat: zod.number().nullish(),
@@ -83,11 +84,10 @@ export const GeocodeSaveParams = zod.object({
 export const GeocodeSaveResponse = zod.object({
   id: zod.number(),
   userId: zod.string(),
-  content: zod.string(),
+  note: zod.string().nullish(),
   url: zod.string().nullish(),
   scrapedTitle: zod.string().nullish(),
-  scrapedDescription: zod.string().nullish(),
-  scrapedImage: zod.string().nullish(),
+  description: zod.string().nullish(),
   placeName: zod.string().nullish(),
   countryCode: zod.string().nullish(),
   lat: zod.number().nullish(),
@@ -107,10 +107,9 @@ export const UpdateSaveParams = zod.object({
 
 export const UpdateSaveBody = zod.object({
   scrapedTitle: zod.string().nullish(),
-  scrapedDescription: zod.string().nullish(),
-  scrapedImage: zod.string().nullish(),
+  description: zod.string().nullish(),
   placeName: zod.string().nullish(),
-  content: zod.string().nullish(),
+  note: zod.string().nullish(),
   tags: zod.array(zod.string()).nullish(),
   category: zod.string().nullish(),
   officialLink: zod.string().nullish(),
@@ -119,11 +118,10 @@ export const UpdateSaveBody = zod.object({
 export const UpdateSaveResponse = zod.object({
   id: zod.number(),
   userId: zod.string(),
-  content: zod.string(),
+  note: zod.string().nullish(),
   url: zod.string().nullish(),
   scrapedTitle: zod.string().nullish(),
-  scrapedDescription: zod.string().nullish(),
-  scrapedImage: zod.string().nullish(),
+  description: zod.string().nullish(),
   placeName: zod.string().nullish(),
   countryCode: zod.string().nullish(),
   lat: zod.number().nullish(),
@@ -272,7 +270,6 @@ export const ScrapeUrlBody = zod.object({
 export const ScrapeUrlResponse = zod.object({
   url: zod.string(),
   title: zod.string().nullish(),
-  description: zod.string().nullish(),
   image: zod.string().nullish(),
   siteName: zod.string().nullish(),
   extractedText: zod.string().nullish(),

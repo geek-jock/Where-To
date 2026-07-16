@@ -27,6 +27,7 @@ import type {
   SaveSelectionInput,
   ScrapeResult,
   ScrapeUrlBody,
+  TagSaveBody,
   UpdateSaveBody,
 } from "./api.schemas";
 
@@ -275,11 +276,14 @@ export const getTagSaveUrl = (id: number) => {
 
 export const tagSave = async (
   id: number,
+  tagSaveBody: TagSaveBody,
   options?: RequestInit,
 ): Promise<Save> => {
   return customFetch<Save>(getTagSaveUrl(id), {
     ...options,
     method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(tagSaveBody),
   });
 };
 
@@ -290,14 +294,14 @@ export const getTagSaveMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof tagSave>>,
     TError,
-    { id: number },
+    { id: number; data: BodyType<TagSaveBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof tagSave>>,
   TError,
-  { id: number },
+  { id: number; data: BodyType<TagSaveBody> },
   TContext
 > => {
   const mutationKey = ["tagSave"];
@@ -311,11 +315,11 @@ export const getTagSaveMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof tagSave>>,
-    { id: number }
+    { id: number; data: BodyType<TagSaveBody> }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, data } = props ?? {};
 
-    return tagSave(id, requestOptions);
+    return tagSave(id, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -324,7 +328,7 @@ export const getTagSaveMutationOptions = <
 export type TagSaveMutationResult = NonNullable<
   Awaited<ReturnType<typeof tagSave>>
 >;
-
+export type TagSaveMutationBody = BodyType<TagSaveBody>;
 export type TagSaveMutationError = ErrorType<unknown>;
 
 /**
@@ -337,14 +341,14 @@ export const useTagSave = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof tagSave>>,
     TError,
-    { id: number },
+    { id: number; data: BodyType<TagSaveBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof tagSave>>,
   TError,
-  { id: number },
+  { id: number; data: BodyType<TagSaveBody> },
   TContext
 > => {
   return useMutation(getTagSaveMutationOptions(options));

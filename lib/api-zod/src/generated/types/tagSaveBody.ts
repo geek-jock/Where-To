@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ScrapeResult {
-  url: string;
-  title?: string | null;
-  image?: string | null;
-  siteName?: string | null;
+export interface TagSaveBody {
   extractedText?: string | null;
 }

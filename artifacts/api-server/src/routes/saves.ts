@@ -39,7 +39,6 @@ function buildOfficialLink(category: string | null, placeName: string | null): s
   if (cat === "park" || cat === "beach" || cat === "nature" || cat === "reserve") {
     return `https://www.google.com/maps/search/${q}`;
   }
-  // Default: Google Maps search
   return `https://www.google.com/maps/search/${q}`;
 }
 
@@ -59,15 +58,13 @@ router.get("/", requireAuth, async (req: any, res) => {
 
 router.post("/", requireAuth, async (req: any, res) => {
   try {
-    const { content, url, scrapedTitle, scrapedDescription, scrapedImage } = req.body;
-    if (!content) return res.status(400).json({ error: "content is required" });
+    const { note, url, scrapedTitle, description } = req.body;
     const [save] = await db.insert(savesTable).values({
       userId: req.userId,
-      content,
+      note: note ?? null,
       url: url ?? null,
       scrapedTitle: scrapedTitle ?? null,
-      scrapedDescription: scrapedDescription ?? null,
-      scrapedImage: scrapedImage ?? null,
+      description: description ?? null,
     }).returning();
     return res.status(201).json(withTags(save));
   } catch (err) {
@@ -79,13 +76,12 @@ router.post("/", requireAuth, async (req: any, res) => {
 router.patch("/:id", requireAuth, async (req: any, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { scrapedTitle, scrapedDescription, scrapedImage, placeName, content, tags, category, officialLink } = req.body;
+    const { scrapedTitle, description, placeName, note, tags, category, officialLink } = req.body;
 
     const updateFields: Record<string, unknown> = {};
     if ("scrapedTitle" in req.body) updateFields.scrapedTitle = scrapedTitle ?? null;
-    if ("scrapedDescription" in req.body) updateFields.scrapedDescription = scrapedDescription ?? null;
-    if ("scrapedImage" in req.body) updateFields.scrapedImage = scrapedImage ?? null;
-    if ("content" in req.body) updateFields.content = content ?? null;
+    if ("description" in req.body) updateFields.description = description ?? null;
+    if ("note" in req.body) updateFields.note = note ?? null;
     if ("tags" in req.body) updateFields.tags = tags ? JSON.stringify(tags) : null;
     if ("category" in req.body) updateFields.category = category ?? null;
     if ("officialLink" in req.body) updateFields.officialLink = officialLink ?? null;
@@ -130,6 +126,8 @@ router.patch("/:id", requireAuth, async (req: any, res) => {
 router.post("/:id/tag", requireAuth, async (req: any, res) => {
   try {
     const id = parseInt(req.params.id);
+    const { extractedText } = req.body ?? {};
+
     const [save] = await db
       .select()
       .from(savesTable)
@@ -137,17 +135,18 @@ router.post("/:id/tag", requireAuth, async (req: any, res) => {
 
     if (!save) return res.status(404).json({ error: "Not found" });
 
-    const blob = [save.scrapedTitle, save.scrapedDescription, save.content, save.placeName]
+    // extractedText is raw transient scrape content — used for AI context only, never stored
+    const blob = [save.scrapedTitle, save.note, save.placeName, extractedText]
       .filter(Boolean).join(" | ");
 
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-5.4-mini",
-      max_completion_tokens: 120,
+      max_completion_tokens: 200,
       messages: [
         {
           role: "system",
           content:
-            "Analyze this travel place and return a JSON object with two fields:\n" +
+            "Analyze this travel place and return a JSON object with three fields:\n" +
             "1. \"tags\": 3-4 lowercase descriptive tags. Choose from:\n" +
             "   VIBE: coastal, mountain, desert, jungle, island, city, countryside, village\n" +
             "   TYPE: nature, foodie, cultural, adventure, wellness, nightlife, architecture, history\n" +
@@ -156,7 +155,9 @@ router.post("/:id/tag", requireAuth, async (req: any, res) => {
             "2. \"category\": ONE word classifying the place type. Choose from:\n" +
             "   hotel, hostel, resort, restaurant, café, bar, attraction, museum, gallery,\n" +
             "   landmark, park, beach, neighborhood, experience, activity, viewpoint, market, spa\n" +
-            "Reply ONLY with a JSON object, e.g. {\"tags\":[\"coastal\",\"iconic\"],\"category\":\"attraction\"}",
+            "3. \"description\": 1-2 sentences, editorial and specific — what makes this place worth going to.\n" +
+            "   Be factual and vivid. No generic tourism language. No emojis.\n" +
+            "Reply ONLY with a JSON object, e.g. {\"tags\":[\"coastal\",\"iconic\"],\"category\":\"attraction\",\"description\":\"...\"}",
         },
         { role: "user", content: blob },
       ],
@@ -165,17 +166,19 @@ router.post("/:id/tag", requireAuth, async (req: any, res) => {
     const raw = aiResponse.choices[0]?.message?.content?.trim() ?? "{}";
     let tags: string[] = [];
     let category: string | null = null;
+    let description: string | null = save.description ?? null;
     try {
       const parsed = JSON.parse(raw);
       if (parsed.tags && Array.isArray(parsed.tags)) tags = parsed.tags.map(String).slice(0, 5);
       if (parsed.category && typeof parsed.category === "string") category = parsed.category.toLowerCase();
+      if (parsed.description && typeof parsed.description === "string") description = parsed.description.trim();
     } catch { /* keep defaults */ }
 
     const officialLink = buildOfficialLink(category, save.placeName);
 
     const [updated] = await db
       .update(savesTable)
-      .set({ tags: JSON.stringify(tags), category, officialLink })
+      .set({ tags: JSON.stringify(tags), category, officialLink, description })
       .where(and(eq(savesTable.id, id), eq(savesTable.userId, req.userId)))
       .returning();
 
@@ -196,7 +199,7 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
 
     if (!save) return res.status(404).json({ error: "Not found" });
 
-    const textBlob = [save.scrapedTitle, save.scrapedDescription, save.content, save.url]
+    const textBlob = [save.scrapedTitle, save.description, save.note, save.url]
       .filter(Boolean).join(" | ");
 
     const aiResponse = await openai.chat.completions.create({
@@ -239,16 +242,13 @@ router.post("/:id/geocode", requireAuth, async (req: any, res) => {
       return data[0] ?? null;
     }
 
-    // Try full query first, then progressively strip leading component (venue name)
     let hit = await nominatimSearch(placeName);
     if (!hit) {
       const parts = placeName.split(",").map((p: string) => p.trim());
       if (parts.length > 2) {
-        // Try without the first part (e.g. skip specific lodge name, search city + country)
         hit = await nominatimSearch(parts.slice(1).join(", "));
       }
       if (!hit && parts.length > 1) {
-        // Last resort: just the last two parts (region + country)
         hit = await nominatimSearch(parts.slice(-2).join(", "));
       }
     }

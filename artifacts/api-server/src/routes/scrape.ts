@@ -145,7 +145,7 @@ async function scrapeUrl(url: string) {
     clearTimeout(timeout);
 
     if (!response.ok) {
-      return { url, title: null, description: null, image: null, siteName: null };
+      return { url, title: null, extractedText: null, image: null, siteName: null };
     }
 
     const html = await response.text();
@@ -164,18 +164,18 @@ async function scrapeUrl(url: string) {
 
     const bodyText = extractBodyText(html);
 
-    // Combine ALL scraped content into description, then clean
-    const description = buildRawDescription([rawMetaDesc, bodyText]) || null;
+    // Combine ALL scraped content into extractedText (raw, transient — never stored as editorial description)
+    const extractedText = buildRawDescription([rawMetaDesc, bodyText]) || null;
 
-    // AI: clean the raw title (primary) + use description for context
+    // AI: clean the raw title (primary) + use extractedText for context
     const cleanRawTitle = rawTitle ? decodeEntities(rawTitle).trim() : null;
-    const descriptionCleanBody = description?.split("\n\n—")[0].trim() ?? null;
-    const aiTitle = await generateTitle(cleanRawTitle, descriptionCleanBody, url);
+    const extractedCleanBody = extractedText?.split("\n\n—")[0].trim() ?? null;
+    const aiTitle = await generateTitle(cleanRawTitle, extractedCleanBody, url);
     const title = aiTitle ?? cleanRawTitle;
 
-    return { url, title, description, image, siteName };
+    return { url, title, extractedText, image, siteName };
   } catch {
-    return { url, title: null, description: null, image: null, siteName: null };
+    return { url, title: null, extractedText: null, image: null, siteName: null };
   }
 }
 

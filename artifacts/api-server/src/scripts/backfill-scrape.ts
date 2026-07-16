@@ -139,7 +139,7 @@ async function main() {
     let newTitle: string | null = null;
     let newDescription: string | null = null;
 
-    if (isGarbage(save.scrapedDescription)) {
+    if (isGarbage(save.description)) {
       // Generate both from place context
       console.log(`  → generating from place context (${save.placeName})`);
       try {
@@ -157,8 +157,8 @@ async function main() {
     } else {
       // Clean existing rich description, move noise to end
       console.log(`  → cleaning existing description`);
-      newDescription = save.scrapedDescription
-        ? cleanAndOrganizeDescription(save.scrapedDescription)
+      newDescription = save.description
+        ? cleanAndOrganizeDescription(save.description)
         : null;
 
       // Generate AI title from clean body
@@ -173,7 +173,7 @@ async function main() {
 
     await db.update(savesTable).set({
       scrapedTitle: newTitle ?? save.scrapedTitle,
-      scrapedDescription: newDescription ?? save.scrapedDescription,
+      description: newDescription ?? save.description,
     }).where(eq(savesTable.id, save.id));
 
     console.log(`  ✓ done\n`);

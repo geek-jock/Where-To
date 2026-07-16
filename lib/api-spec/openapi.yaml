@@ -81,6 +81,11 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagSaveBody"
       responses:
         "200":
           description: Tagged save
@@ -295,18 +300,16 @@ components:
           type: integer
         userId:
           type: string
-        content:
+        note:
           type: string
+          nullable: true
         url:
           type: string
           nullable: true
         scrapedTitle:
           type: string
           nullable: true
-        scrapedDescription:
-          type: string
-          nullable: true
-        scrapedImage:
+        description:
           type: string
           nullable: true
         placeName:
@@ -338,7 +341,6 @@ components:
       required:
         - id
         - userId
-        - content
         - createdAt
 
     UpdateSaveBody:
@@ -347,16 +349,13 @@ components:
         scrapedTitle:
           type: string
           nullable: true
-        scrapedDescription:
-          type: string
-          nullable: true
-        scrapedImage:
+        description:
           type: string
           nullable: true
         placeName:
           type: string
           nullable: true
-        content:
+        note:
           type: string
           nullable: true
         tags:
@@ -374,22 +373,18 @@ components:
     CreateSaveBody:
       type: object
       properties:
-        content:
+        note:
           type: string
+          nullable: true
         url:
           type: string
           nullable: true
         scrapedTitle:
           type: string
           nullable: true
-        scrapedDescription:
+        description:
           type: string
           nullable: true
-        scrapedImage:
-          type: string
-          nullable: true
-      required:
-        - content
 
     VerdictJson:
       type: object
@@ -523,15 +518,19 @@ components:
       required:
         - url
 
+    TagSaveBody:
+      type: object
+      properties:
+        extractedText:
+          type: string
+          nullable: true
+
     ScrapeResult:
       type: object
       properties:
         url:
           type: string
         title:
-          type: string
-          nullable: true
-        description:
           type: string
           nullable: true
         image:

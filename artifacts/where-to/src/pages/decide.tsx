@@ -18,7 +18,7 @@ import { useLocation } from "wouter";
 type Phase = "ask" | "review" | "result";
 
 function SaveChip({ save, onRemove }: { save: Save; onRemove: () => void }) {
-  const label = save.scrapedTitle || save.placeName || save.content?.slice(0, 30) || "Save";
+  const label = save.scrapedTitle || save.placeName || save.note?.slice(0, 30) || "Save";
   return (
     <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary/10 border border-primary/20 text-sm text-foreground font-medium">
       <span className="max-w-[160px] truncate">{label}</span>
@@ -54,7 +54,7 @@ export default function Decide() {
   const searchResults = searchQuery.trim()
     ? saves.filter(s => {
         const q = searchQuery.toLowerCase();
-        const label = (s.scrapedTitle || s.placeName || s.content || "").toLowerCase();
+        const label = (s.scrapedTitle || s.placeName || s.note || "").toLowerCase();
         const tags = (s.tags ?? []).join(" ").toLowerCase();
         const place = (s.placeName || "").toLowerCase();
         return (label.includes(q) || tags.includes(q) || place.includes(q))
@@ -246,7 +246,7 @@ export default function Decide() {
               {showSearchResults && searchResults.length > 0 && (
                 <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-card border border-border shadow-md divide-y divide-border">
                   {searchResults.map(save => {
-                    const label = save.scrapedTitle || save.placeName || save.content?.slice(0, 60) || "Save";
+                    const label = save.scrapedTitle || save.placeName || save.note?.slice(0, 60) || "Save";
                     const sub = save.placeName || (save.tags ?? []).slice(0, 3).join(", ");
                     return (
                       <button

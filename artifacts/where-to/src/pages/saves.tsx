@@ -22,7 +22,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SavesMap } from "@/components/saves-map";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { parseDescription } from "@/lib/parse-description";
 
 function TagPill({ tag }: { tag: string }) {
   return (
@@ -109,7 +108,7 @@ function SaveDetailDialog({
   const startEdit = () => {
     if (!save) return;
     setTitle(save.scrapedTitle ?? "");
-    setDescription(parseDescription(save.scrapedDescription) ?? "");
+    setDescription(save.description ?? "");
     setPlaceName(save.placeName ?? "");
     setTagsInput((save.tags ?? []).join(", "));
     setEditing(true);
@@ -125,7 +124,7 @@ function SaveDetailDialog({
         id: save.id,
         data: {
           scrapedTitle: title.trim() || null,
-          scrapedDescription: description.trim() || null,
+          description: description.trim() || null,
           placeName: placeName.trim() || null,
           tags: newTags.length > 0 ? newTags : null,
         },
@@ -139,10 +138,9 @@ function SaveDetailDialog({
   };
 
   if (!save) return null;
-  const cleanedDescription = parseDescription(save.scrapedDescription);
   const tags = save.tags ?? [];
   const isNote = !save.url;
-  const hasOwnNote = save.scrapedTitle && save.content && save.content !== save.url;
+  const hasOwnNote = save.scrapedTitle && save.note && save.note !== save.url;
 
   let sourceDomain = "";
   try { if (save.url) sourceDomain = new URL(save.url).hostname.replace("www.", ""); } catch { /* ignore */ }
@@ -212,13 +210,13 @@ function SaveDetailDialog({
           )}
 
           {/* About (description) */}
-          {(cleanedDescription || editing) && (
+          {(save.description || editing) && (
             <div className="px-6 py-4">
               <Section label="About">
                 {editing ? (
                   <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" className="text-sm min-h-[90px] resize-none" />
                 ) : (
-                  <p className="text-sm text-foreground/80 leading-relaxed">{cleanedDescription}</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed">{save.description}</p>
                 )}
               </Section>
             </div>
@@ -228,7 +226,7 @@ function SaveDetailDialog({
           {!editing && (hasOwnNote || isNote) && (
             <div className="px-6 py-4">
               <Section label={isNote ? "Note" : "Your note"}>
-                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{save.content}</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{save.note}</p>
               </Section>
             </div>
           )}
@@ -325,7 +323,7 @@ export default function Saves() {
   const [scrapedData, setScrapedData] = useState<{
     url: string;
     title?: string | null;
-    description?: string | null;
+    extractedText?: string | null;
     image?: string | null;
   } | null>(null);
 
@@ -353,20 +351,18 @@ export default function Saves() {
     try {
       const save = await createSave.mutateAsync({
         data: {
-          content: scrapedData.url,
           url: scrapedData.url,
           scrapedTitle: scrapedData.title,
-          scrapedDescription: scrapedData.description,
-          scrapedImage: scrapedData.image,
         }
       });
+      const capturedExtractedText = scrapedData.extractedText;
       queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
       setScrapedData(null);
       setUrlInput("");
       toast({ title: "Saved successfully" });
       Promise.all([
         geocodeSave.mutateAsync({ id: save.id }),
-        tagSave.mutateAsync({ id: save.id }),
+        tagSave.mutateAsync({ id: save.id, data: { extractedText: capturedExtractedText } }),
       ]).finally(() => {
         queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
       });
@@ -379,14 +375,14 @@ export default function Saves() {
     if (!textInput.trim()) return;
     try {
       const save = await createSave.mutateAsync({
-        data: { content: textInput }
+        data: { note: textInput }
       });
       queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
       setTextInput("");
       toast({ title: "Saved successfully" });
       Promise.all([
         geocodeSave.mutateAsync({ id: save.id }),
-        tagSave.mutateAsync({ id: save.id }),
+        tagSave.mutateAsync({ id: save.id, data: {} }),
       ]).finally(() => {
         queryClient.invalidateQueries({ queryKey: getListSavesQueryKey() });
       });
@@ -456,8 +452,8 @@ export default function Saves() {
                 <div className="border border-border p-4 flex gap-4 bg-muted/30">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-serif font-medium text-lg truncate">{scrapedData.title || scrapedData.url}</h3>
-                    {scrapedData.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{scrapedData.description}</p>
+                    {scrapedData.extractedText && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{scrapedData.extractedText}</p>
                     )}
                     <p className="text-xs text-muted-foreground mt-2 truncate flex items-center gap-1">
                       <Globe className="h-3 w-3" /> {scrapedData.url}
@@ -562,7 +558,7 @@ export default function Saves() {
                             <div className="mb-2"><CategoryBadge category={activePinSave.category} /></div>
                           )}
                           <h3 className="font-serif font-semibold text-lg leading-snug">
-                            {activePinSave.scrapedTitle || activePinSave.placeName || activePinSave.content.slice(0, 60)}
+                            {activePinSave.scrapedTitle || activePinSave.placeName || activePinSave.note?.slice(0, 60) || "Saved"}
                           </h3>
                         </div>
                         <button
@@ -580,9 +576,9 @@ export default function Saves() {
                         </p>
                       )}
 
-                      {activePinSave.scrapedDescription && (
+                      {activePinSave.description && (
                         <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-3">
-                          {activePinSave.scrapedDescription.replace(/^(.{0,200}).*/, "$1")}
+                          {activePinSave.description.replace(/^(.{0,200}).*/, "$1")}
                         </p>
                       )}
 
@@ -621,7 +617,7 @@ export default function Saves() {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">
-                            {save.scrapedTitle || save.placeName || save.content.slice(0, 40)}
+                            {save.scrapedTitle || save.placeName || save.note?.slice(0, 40) || "Saved"}
                           </p>
                           {save.placeName && (
                             <p className="text-xs text-muted-foreground truncate">{save.placeName}</p>
@@ -667,12 +663,12 @@ export default function Saves() {
                                 {save.scrapedTitle}
                               </a>
                             </h3>
-                            {save.scrapedDescription && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{save.scrapedDescription}</p>
+                            {save.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{save.description}</p>
                             )}
                           </>
                         ) : (
-                          <p className="text-foreground whitespace-pre-wrap text-sm">{save.content}</p>
+                          <p className="text-foreground whitespace-pre-wrap text-sm">{save.note}</p>
                         )}
                         {save.url && !save.scrapedTitle && (
                           <a

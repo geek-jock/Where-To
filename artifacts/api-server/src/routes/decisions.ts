@@ -151,9 +151,10 @@ router.post("/", requireAuth, async (req: any, res) => {
       ));
 
     const savesSnapshot = saves.map(s => {
-      const parts = [`ID:${s.id}`, s.content];
+      const parts = [`ID:${s.id}`];
+      if (s.note) parts.push(s.note);
       if (s.scrapedTitle) parts.push(`Title: ${s.scrapedTitle}`);
-      if (s.scrapedDescription) parts.push(`Description: ${s.scrapedDescription}`);
+      if (s.description) parts.push(`Description: ${s.description}`);
       if (s.url) parts.push(`URL: ${s.url}`);
       return parts.join("\n");
     }).join("\n\n---\n\n");
@@ -229,7 +230,7 @@ router.post("/select-saves", requireAuth, async (req: any, res): Promise<void> =
     }
 
     const saveSummaries = saves.map(s => {
-      const label = s.scrapedTitle || s.placeName || (s.content?.slice(0, 80) ?? "");
+      const label = s.scrapedTitle || s.placeName || (s.note?.slice(0, 80) ?? "");
       const tags = (Array.isArray(s.tags) ? s.tags : []).join(", ");
       const place = s.placeName ?? "";
       return `ID:${s.id} | ${label}${place ? ` | ${place}` : ""}${tags ? ` | tags: ${tags}` : ""}`;

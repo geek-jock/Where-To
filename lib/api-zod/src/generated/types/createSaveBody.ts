@@ -7,9 +7,8 @@
  */
 
 export interface CreateSaveBody {
-  content: string;
+  note?: string | null;
   url?: string | null;
   scrapedTitle?: string | null;
-  scrapedDescription?: string | null;
-  scrapedImage?: string | null;
+  description?: string | null;
 }

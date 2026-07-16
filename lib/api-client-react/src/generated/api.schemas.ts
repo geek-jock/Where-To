@@ -12,11 +12,10 @@ export interface HealthStatus {
 export interface Save {
   id: number;
   userId: string;
-  content: string;
+  note?: string | null;
   url?: string | null;
   scrapedTitle?: string | null;
-  scrapedDescription?: string | null;
-  scrapedImage?: string | null;
+  description?: string | null;
   placeName?: string | null;
   countryCode?: string | null;
   lat?: number | null;
@@ -29,21 +28,19 @@ export interface Save {
 
 export interface UpdateSaveBody {
   scrapedTitle?: string | null;
-  scrapedDescription?: string | null;
-  scrapedImage?: string | null;
+  description?: string | null;
   placeName?: string | null;
-  content?: string | null;
+  note?: string | null;
   tags?: string[] | null;
   category?: string | null;
   officialLink?: string | null;
 }
 
 export interface CreateSaveBody {
-  content: string;
+  note?: string | null;
   url?: string | null;
   scrapedTitle?: string | null;
-  scrapedDescription?: string | null;
-  scrapedImage?: string | null;
+  description?: string | null;
 }
 
 export type VerdictJsonType =
@@ -109,10 +106,13 @@ export interface ScrapeUrlBody {
   url: string;
 }
 
+export interface TagSaveBody {
+  extractedText?: string | null;
+}
+
 export interface ScrapeResult {
   url: string;
   title?: string | null;
-  description?: string | null;
   image?: string | null;
   siteName?: string | null;
   extractedText?: string | null;

@@ -104,9 +104,10 @@ Return ONLY a JSON object: { "type": "choose" } or { "type": "structure" }. No o
 
 async function generateDecision(question: string, saves: typeof savesTable.$inferSelect[]) {
   const savesSnapshot = saves.map(s => {
-    const parts = [`ID:${s.id}`, s.content];
+    const parts = [`ID:${s.id}`];
+    if (s.note) parts.push(s.note);
     if (s.scrapedTitle) parts.push(`Title: ${s.scrapedTitle}`);
-    if (s.scrapedDescription) parts.push(`Description: ${s.scrapedDescription}`);
+    if (s.description) parts.push(`Description: ${s.description}`);
     return parts.join("\n");
   }).join("\n\n---\n\n");
 
@@ -144,9 +145,9 @@ async function generateDecision(question: string, saves: typeof savesTable.$infe
 
 type SaveInput = {
   url: string;
-  content: string;
+  note: string;
   scrapedTitle: string;
-  scrapedDescription: string;
+  description: string;
   placeName: string;
   countryCode: string;
   lat: number;
@@ -158,172 +159,172 @@ type SaveInput = {
 const ELENA_SAVES: SaveInput[] = [
   {
     url: "https://www.reddit.com/r/solotravel/comments/18xkp2q/oaxaca_for_5_weeks_anyone_done_this/",
-    content: "found this thread when i was researching a longer oaxaca stay. someone mentioned renting in jalatlaco neighborhood for $600/month and i can't stop thinking about it",
+    note: "found this thread when i was researching a longer oaxaca stay. someone mentioned renting in jalatlaco neighborhood for $600/month and i can't stop thinking about it",
     scrapedTitle: "Oaxaca for 5 weeks — anyone done this? : r/solotravel",
-    scrapedDescription: "Planning to stay in Oaxaca from mid-January through late February. Found a furnished room in Jalatlaco for $600/month. The mezcal bars in that neighborhood are apparently insane and the Mercado 20 de Noviembre in the morning is unlike anything else in Mexico...",
+    description: "Jalatlaco neighborhood in Oaxaca offers furnished rooms from $600/month — a slow-travel base with serious mezcal bars and the Mercado 20 de Noviembre at your doorstep.",
     placeName: "Oaxaca", countryCode: "MX", lat: 17.07, lng: -96.72,
     tags: ["slow travel", "food", "mezcal", "markets"], category: "destination",
   },
   {
     url: "https://www.airbnb.com/rooms/52847361",
-    content: "this is the masseria my friend stayed at near lecce. she was there 3 weeks last september and said she never wanted to leave. need to check if they do longer bookings",
+    note: "this is the masseria my friend stayed at near lecce. she was there 3 weeks last september and said she never wanted to leave. need to check if they do longer bookings",
     scrapedTitle: "Masseria Montenapoleone — farmhouse stay near Lecce, Puglia",
-    scrapedDescription: "Renovated 400-year-old masseria on a working olive and grape farm near Lecce. Breakfast and dinner included, made from produce grown on the property. Minimum stay 7 nights in shoulder season. Trullo suite sleeps 2...",
+    description: "A 400-year-old masseria on a working olive and grape farm near Lecce — breakfast and dinner included, minimum 7 nights in shoulder season.",
     placeName: "Puglia", countryCode: "IT", lat: 40.35, lng: 18.17,
-    tags: ["Italy", "food", "slow travel", "masseria", "wine"], category: "destination",
+    tags: ["Italy", "food", "slow travel", "masseria", "wine"], category: "resort",
   },
   {
     url: "https://www.instagram.com/p/C3mNxKVOrwI/",
-    content: "bookmarked this for the porto wine caves. four hours of tastings for basically nothing?? that's the whole vibe right there",
-    scrapedTitle: "The cellars under Vila Nova de Gaia are one of the great free afternoons in Europe 🍷",
-    scrapedDescription: "Spent four hours tasting port wine in the caves below the city. Most cellars charge €5–10 and give you 2–3 pours. The Taylor Fladgate one has views over the Douro from the terrace. Definitely do this on a weekday — weekends get crowded...",
+    note: "bookmarked this for the porto wine caves. four hours of tastings for basically nothing?? that's the whole vibe right there",
+    scrapedTitle: "The cellars under Vila Nova de Gaia are one of the great free afternoons in Europe",
+    description: "Port wine caves under Vila Nova de Gaia — most cellars charge €5–10 for 2–3 pours, with terrace views over the Douro. Best visited on a weekday.",
     placeName: "Porto", countryCode: "PT", lat: 41.15, lng: -8.61,
-    tags: ["wine", "Portugal", "food", "walking"], category: "destination",
+    tags: ["wine", "Portugal", "food", "walking"], category: "experience",
   },
   {
     url: "https://www.seriouseats.com/cretan-food-what-to-eat-in-crete-greece",
-    content: "went down a rabbit hole about cretan food. the dakos thing sounds incredible. want to go in october when it's empty",
+    note: "went down a rabbit hole about cretan food. the dakos thing sounds incredible. want to go in october when it's empty",
     scrapedTitle: "The Essential Guide to Cretan Food: What to Eat in Crete",
-    scrapedDescription: "Cretan cuisine is one of the world's great undiscovered food cultures. The dakos salad — rusks softened with tomato and piled with local cheese — is deceptively simple and impossible to stop eating. The lamb with stamnagathi greens, the kalitsounia pastries at breakfast...",
+    description: "Cretan cuisine runs deep — dakos salad, kalitsounia pastries, and lamb with stamnagathi greens. October means empty villages and the best produce of the season.",
     placeName: "Crete", countryCode: "GR", lat: 35.34, lng: 25.13,
     tags: ["Greece", "food", "islands", "slow travel", "affordable"], category: "destination",
   },
   {
     url: "https://www.reddit.com/r/portugal/comments/1c2qfk8/mouraria_vs_intendente_where_to_stay_in_lisbon/",
-    content: "trying to figure out which lisbon neighbourhood to base in for a longer stay. the intendente market looks really good. need to check november pricing",
+    note: "trying to figure out which lisbon neighbourhood to base in for a longer stay. the intendente market looks really good. need to check november pricing",
     scrapedTitle: "Mouraria vs Intendente — where to stay in Lisbon for 3+ weeks? : r/portugal",
-    scrapedDescription: "Been debating this for months. Mouraria is more authentic but getting touristy fast — especially around the fado houses near the castle. Intendente has the Sunday market and feels more like the actual city. Both have furnished rooms under €900/month if you look on Uniplaces...",
+    description: "Intendente beats Mouraria for a longer stay — Sunday market, more local feel, and furnished rooms under €900/month on Uniplaces.",
     placeName: "Lisbon", countryCode: "PT", lat: 38.72, lng: -9.14,
-    tags: ["Portugal", "fado", "food", "city", "walking"], category: "destination",
+    tags: ["Portugal", "fado", "food", "city", "walking"], category: "neighborhood",
   },
   {
     url: "https://www.messynessychic.com/2023/10/fez-guide-medina-leather-tanneries/",
-    content: "this blog post finally made me actually want to go to fez. the hammam recommendation near the andalusian mosque — saving that specifically",
+    note: "this blog post finally made me actually want to go to fez. the hammam recommendation near the andalusian mosque — saving that specifically",
     scrapedTitle: "The Only Fez Guide You Need (For People Who Hate Guides)",
-    scrapedDescription: "Fez el-Bali has 9,000 alleyways and you will get lost. This is the correct outcome. The Chouara tannery is worth the leather shop harassment — go early, before the tour groups. The hammam on the side street near the Andalusian mosque charges 15 dirhams and is where locals actually go...",
+    description: "Fez el-Bali's 9,000 alleyways reward getting lost — go to the Chouara tannery early, then find the hammam near the Andalusian mosque that locals actually use for 15 dirhams.",
     placeName: "Fez", countryCode: "MA", lat: 34.03, lng: -5.00,
     tags: ["Morocco", "medina", "food", "craft", "hammam"], category: "destination",
   },
   {
     url: "https://www.bonappetit.com/story/umbria-italy-truffle-hunting-norcia",
-    content: "norcia in november. truffle market on saturdays. literally no one else is there. this is exactly the kind of thing i'm always trying to find",
+    note: "norcia in november. truffle market on saturdays. literally no one else is there. this is exactly the kind of thing i'm always trying to find",
     scrapedTitle: "In Umbria, Truffle Season Is the Whole Point",
-    scrapedDescription: "Norcia in November is the epicenter of the black truffle world, and the norcini butchers have been curing meat in these mountains for centuries. The Saturday morning truffle market by the basilica runs from 8am. You can buy half a kilo for what it would cost as a shaving at a London restaurant...",
+    description: "Norcia in November is ground zero for black truffle season — Saturday market by the basilica from 8am, with prices a fraction of what London restaurants charge.",
     placeName: "Umbria", countryCode: "IT", lat: 42.79, lng: 13.10,
-    tags: ["Italy", "truffle", "food", "off-season", "hill towns"], category: "destination",
+    tags: ["Italy", "truffle", "food", "off-season", "hill towns"], category: "market",
   },
   {
     url: "https://www.reddit.com/r/solotravel/comments/1b4hkl9/thessaloniki_is_shockingly_good_and_nobody_talks/",
-    content: "this is the kind of post i save and never act on. 10 days in thessaloniki with basically free food brought with every drink?? need to look at october flights",
+    note: "this is the kind of post i save and never act on. 10 days in thessaloniki with basically free food brought with every drink?? need to look at october flights",
     scrapedTitle: "Thessaloniki is shockingly good and nobody talks about it : r/solotravel",
-    scrapedDescription: "Just got back from 10 days. The meze culture is incredible — you order a drink and they keep bringing small plates, no extra charge. The seafood at the fish tavernas on the waterfront is fresher than anything I've had in Athens. Rent is absurdly cheap...",
+    description: "Thessaloniki's meze culture means small plates arrive with every drink at no extra charge — the waterfront fish tavernas are fresher than anything in Athens, and rent is cheap.",
     placeName: "Thessaloniki", countryCode: "GR", lat: 40.64, lng: 22.94,
     tags: ["Greece", "food", "underrated", "meze", "affordable"], category: "destination",
   },
   {
     url: "https://www.lonelyplanet.com/articles/best-things-to-do-merida-mexico",
-    content: "keeping this as an alternative to oaxaca. quieter, more affordable apparently, and the cenotes don't have influencers in them",
+    note: "keeping this as an alternative to oaxaca. quieter, more affordable apparently, and the cenotes don't have influencers in them",
     scrapedTitle: "The best things to do in Mérida, Mexico's most underrated city",
-    scrapedDescription: "Mérida is the capital of Yucatán and still mostly overlooked by international visitors. The Sunday market takes over the main square with hammock vendors and local food. Day trips to cenotes around Homún cost a fraction of what anything near Tulum charges...",
+    description: "Mérida's Sunday market fills the main square with hammock vendors and local food — day trips to cenotes near Homún cost a fraction of anything near Tulum.",
     placeName: "Mérida", countryCode: "MX", lat: 20.97, lng: -89.62,
     tags: ["Mexico", "Yucatan", "food", "cenotes", "affordable"], category: "destination",
   },
   {
     url: "https://www.booking.com/hotel/mt/casa-ellul-valletta.html",
-    content: "valletta for january? this guesthouse keeps coming up. the city size is the appeal — walk everywhere, no decisions needed",
+    note: "valletta for january? this guesthouse keeps coming up. the city size is the appeal — walk everywhere, no decisions needed",
     scrapedTitle: "Casa Ellul, Valletta – Updated 2025 Prices",
-    scrapedDescription: "Boutique guesthouse set in a historic palazzo in central Valletta. 7 rooms decorated with original Maltese antiques and contemporary art. Steps from the Grand Harbour. Breakfast included. Free cancellation on most rates...",
+    description: "Seven-room boutique guesthouse in a historic Valletta palazzo, steps from the Grand Harbour — breakfast included, free cancellation, walkable to everything.",
     placeName: "Valletta", countryCode: "MT", lat: 35.90, lng: 14.51,
-    tags: ["Malta", "history", "food", "harbor", "winter"], category: "destination",
+    tags: ["Malta", "history", "food", "harbor", "winter"], category: "hotel",
   },
 ];
 
 const JAMES_SAVES: SaveInput[] = [
   {
     url: "https://www.alltrails.com/trail/faroe-islands/streymoy/slaetaratindur-summit",
-    content: "highest point in the faroes. looks totally manageable without a guide. want to do this in august when the puffins are still there",
+    note: "highest point in the faroes. looks totally manageable without a guide. want to do this in august when the puffins are still there",
     scrapedTitle: "Slaettaratindur Summit Trail — AllTrails",
-    scrapedDescription: "The highest point in the Faroe Islands at 882m. Trail starts from Eiðisvatn lake and takes 3–4 hours round trip. Expect Atlantic weather and dramatic views over the North Atlantic. On weekdays in August you may not see another hiker. Puffin colonies visible from the ridge until late August...",
+    description: "Faroe Islands' highest point at 882m — 3–4 hours round trip from Eiðisvatn lake with puffin colonies visible from the ridge until late August.",
     placeName: "Faroe Islands", countryCode: "FO", lat: 61.89, lng: -6.91,
-    tags: ["hiking", "remote", "Atlantic", "photography", "puffins"], category: "destination",
+    tags: ["hiking", "remote", "Atlantic", "photography", "puffins"], category: "activity",
   },
   {
     url: "https://www.thebrokebackpacker.com/svalbard-travel-guide-without-cruise/",
-    content: "svalbard without a cruise is actually doable. february polar night, snowmobile rentals out of longyearbyen. need to check costs",
+    note: "svalbard without a cruise is actually doable. february polar night, snowmobile rentals out of longyearbyen. need to check costs",
     scrapedTitle: "How to Do Svalbard Without a Cruise Ship (A Practical Guide)",
-    scrapedDescription: "Most people experience Svalbard on a cruise. You don't have to. Longyearbyen has guesthouses, you can rent snowmobiles in winter for around $150/day, and small-group snowshoeing into the backcountry exists for under $100. The polar night runs from October to February...",
+    description: "Svalbard independent: Longyearbyen guesthouses, snowmobile rentals from ~$150/day, and small-group snowshoeing into the backcountry for under $100 during polar night.",
     placeName: "Svalbard", countryCode: "NO", lat: 78.22, lng: 15.65,
     tags: ["Arctic", "polar", "remote", "snowmobile", "wildlife"], category: "destination",
   },
   {
     url: "https://www.reddit.com/r/solotravel/comments/1amqx6t/just_finished_the_w_circuit_torres_del_paine_ama/",
-    content: "this ama convinced me. august off-season on the W circuit, 20 people over 5 days. that's exactly what i want",
+    note: "this ama convinced me. august off-season on the W circuit, 20 people over 5 days. that's exactly what i want",
     scrapedTitle: "Just finished the W Circuit — Torres del Paine. AMA : r/solotravel",
-    scrapedDescription: "Did the circuit in August, which is off-season down there. Saw maybe 20 people total over 5 days on trail. The refugios had space and the wind was brutal but the trail is so good you don't care. Solo hiking is completely fine — the waymarking is excellent. Budget about $50/day all in...",
+    description: "August on the W Circuit means roughly 20 people over 5 days — brutal wind, excellent waymarking, refugios with space, and ~$50/day all in.",
     placeName: "Patagonia", countryCode: "CL", lat: -51.03, lng: -73.00,
-    tags: ["hiking", "Patagonia", "glaciers", "off-season", "solo"], category: "destination",
+    tags: ["hiking", "Patagonia", "glaciers", "off-season", "solo"], category: "activity",
   },
   {
     url: "https://www.nationalgeographic.com/travel/article/namibia-sossusvlei-skeleton-coast-guide",
-    content: "skeleton coast has been on my mind for 2 years. self-drive looks doable with the right 4wd. need to get there before it gets discovered",
+    note: "skeleton coast has been on my mind for 2 years. self-drive looks doable with the right 4wd. need to get there before it gets discovered",
     scrapedTitle: "The remote wonder of Namibia: dunes, desert, and the Skeleton Coast",
-    scrapedDescription: "Sossusvlei's red dunes are the most photographed in Africa but still deliver — go at sunrise before the bus tours arrive. The Skeleton Coast is something else: bleaker, quieter, almost no infrastructure. The drive from Swakopmund to the Skeleton Coast Park takes a full day on gravel...",
+    description: "The Skeleton Coast beyond Swakopmund is a full day on gravel with almost no infrastructure — bleaker and quieter than Sossusvlei, and still largely undiscovered.",
     placeName: "Namibia", countryCode: "NA", lat: -24.73, lng: 15.34,
     tags: ["desert", "photography", "Africa", "self-drive", "remote"], category: "destination",
   },
   {
     url: "https://www.caravanistan.com/kyrgyzstan/song-kol-lake/",
-    content: "song-kul in july. nomadic yurt stay, no signal, horses. this is the kind of place where you actually stop checking your phone",
+    note: "song-kul in july. nomadic yurt stay, no signal, horses. this is the kind of place where you actually stop checking your phone",
     scrapedTitle: "Song-Kul Lake: Complete Guide to Kyrgyzstan's High-Altitude Lake",
-    scrapedDescription: "Song-Kul sits at 3,016m and is only accessible June through September. You stay in yurts with nomadic families — meals included, horses available to hire. No phone signal, no electricity. The lake is surrounded by summer pasture and the sunrises over the Tian Shan are disorienting...",
+    description: "Song-Kul sits at 3,016m accessible June–September — yurt stays with nomadic families, horses to hire, no phone signal, no electricity, and disorientingly beautiful sunrises.",
     placeName: "Kyrgyzstan", countryCode: "KG", lat: 42.87, lng: 74.59,
-    tags: ["Central Asia", "mountains", "nomadic", "yurt", "horses"], category: "destination",
+    tags: ["Central Asia", "mountains", "nomadic", "yurt", "horses"], category: "experience",
   },
   {
     url: "https://www.lonelyplanet.com/articles/laugavegur-trail-guide",
-    content: "want to do laugavegur in august. self-guided with hut bookings. been looking at f-road access for landmannalaugar approach",
+    note: "want to do laugavegur in august. self-guided with hut bookings. been looking at f-road access for landmannalaugar approach",
     scrapedTitle: "The Laugavegur Trail: Iceland's most spectacular hike, fully explained",
-    scrapedDescription: "55km through Iceland's highlands from Landmannalaugar to Þórsmörk. Rhyolite mountains, geothermal springs, obsidian fields, and snow crossings even in August. The mountain huts book out months in advance. Self-guided is fine if you're comfortable with river crossings...",
+    description: "55km through Iceland's highlands — rhyolite mountains, geothermal springs, obsidian fields, and snow crossings in August. Mountain huts book out months ahead.",
     placeName: "Iceland Highlands", countryCode: "IS", lat: 63.99, lng: -19.07,
-    tags: ["Iceland", "hiking", "highlands", "photography", "huts"], category: "destination",
+    tags: ["Iceland", "hiking", "highlands", "photography", "huts"], category: "activity",
   },
   {
     url: "https://www.youtube.com/watch?v=4pPQ2jK0x5E",
-    content: "watched this twice. the logistics section is really useful. thinking gobi + horse trek in the north. 3 weeks minimum",
+    note: "watched this twice. the logistics section is really useful. thinking gobi + horse trek in the north. 3 weeks minimum",
     scrapedTitle: "30 Days Traveling Mongolia Alone — What Nobody Tells You",
-    scrapedDescription: "A month in Mongolia without a guide or organized tour. The logistics are harder than people admit but completely manageable with some planning. Guesthouses in Ulaanbaatar can organize everything. The Gobi alone deserves 5 days. Budget roughly $30–40/day outside UB...",
+    description: "Mongolia independent needs planning but works: Ulaanbaatar guesthouses organize everything, the Gobi alone deserves 5 days, and budget is ~$30–40/day outside UB.",
     placeName: "Mongolia", countryCode: "MN", lat: 47.89, lng: 106.91,
     tags: ["Mongolia", "steppe", "nomadic", "Gobi", "horses"], category: "destination",
   },
   {
     url: "https://www.reddit.com/r/solotravel/comments/11nkw2p/kamchatka_solo_trip_report_what_i_wish_id_known/",
-    content: "need to actually look at the permit situation for kamchatka. helicopter costs are real but the volcanic fields you can only reach that way look insane",
+    note: "need to actually look at the permit situation for kamchatka. helicopter costs are real but the volcanic fields you can only reach that way look insane",
     scrapedTitle: "Kamchatka solo trip report — what I wish I'd known : r/solotravel",
-    scrapedDescription: "Kamchatka is genuinely difficult. Most backcountry hiking requires a registered guide by law — you can skirt this but it's risky. Helicopter access to the remote volcanic fields runs $300–500 depending on group size. The Tolbachik lava fields are worth every ruble...",
+    description: "Kamchatka backcountry requires a registered guide by law. Helicopter access to the Tolbachik lava fields runs $300–500 by group size — worth every ruble.",
     placeName: "Kamchatka", countryCode: "RU", lat: 53.01, lng: 158.65,
     tags: ["volcanoes", "Russia", "remote", "helicopter", "extreme"], category: "destination",
   },
   {
     url: "https://www.visitgreenland.com/inspiration/dog-sledding-in-greenland/",
-    content: "february dog sledding out of sisimiut. looks genuinely different from svalbard — more remote, different culture. pricing seems reasonable",
+    note: "february dog sledding out of sisimiut. looks genuinely different from svalbard — more remote, different culture. pricing seems reasonable",
     scrapedTitle: "Dog Sledding in Greenland — The Complete Experience Guide",
-    scrapedDescription: "The best traditional dog sledding runs February through April when the sea ice is solid enough. Sisimiut is the main base — smaller than Ilulissat and less touristed. You travel with Greenlandic mushers, not tour operators. Multi-day trips go out on the ice sheet with overnight camps...",
+    description: "Sisimiut is the base for traditional dog sledding February–April — smaller than Ilulissat, less touristed, traveling with Greenlandic mushers on multi-day ice sheet camps.",
     placeName: "Greenland", countryCode: "GL", lat: 69.22, lng: -51.10,
-    tags: ["Arctic", "ice", "aurora", "dog sled", "culture"], category: "destination",
+    tags: ["Arctic", "ice", "aurora", "dog sled", "culture"], category: "experience",
   },
   {
     url: "https://www.reddit.com/r/india/comments/1d9vf2m/solo_ladakh_trip_report_zanskar_valley_by_jeep/",
-    content: "this trip report is exactly what i needed for ladakh. zanskar valley by jeep, monastery stays, pangong at the end. permits are complicated but doable solo",
+    note: "this trip report is exactly what i needed for ladakh. zanskar valley by jeep, monastery stays, pangong at the end. permits are complicated but doable solo",
     scrapedTitle: "Solo Ladakh trip report: Zanskar Valley by jeep [very detailed] : r/india",
-    scrapedDescription: "Did the Zanskar Valley road in August — mostly unpaved, takes two full days from Kargil. The monastery guesthouses are $10–15 a night and the monks will feed you. Altitude hit me hard at Rangdum (3,800m). Pangong Tso at the end is worth the pain...",
+    description: "Zanskar Valley road takes two full days from Kargil on mostly unpaved track — monastery guesthouses at $10–15/night, altitude hits hard at Rangdum (3,800m), Pangong Tso at the end.",
     placeName: "Ladakh", countryCode: "IN", lat: 34.17, lng: 77.58,
     tags: ["India", "Himalayas", "altitude", "monasteries", "jeep"], category: "destination",
   },
   {
     url: "https://www.atlasobscura.com/articles/how-to-get-to-socotra-island",
-    content: "logistics for socotra are genuinely painful. abu dhabi charter seems to be the main route now. been sitting on this for 6 months wondering if i'll actually pull the trigger",
+    note: "logistics for socotra are genuinely painful. abu dhabi charter seems to be the main route now. been sitting on this for 6 months wondering if i'll actually pull the trigger",
     scrapedTitle: "The Complicated, Rewarding Quest to Reach the 'Galápagos of the Indian Ocean'",
-    scrapedDescription: "Getting to Socotra requires either a charter flight from Abu Dhabi or catching the intermittent Yemenia flight from Cairo — when it runs. Travel insurance won't cover you. The dragon blood trees are unlike anything on earth. The beaches are empty. The permit process takes 2–3 weeks...",
+    description: "Socotra requires a charter flight from Abu Dhabi or the intermittent Yemenia route from Cairo — dragon blood trees, empty beaches, 2–3 weeks for the permit process.",
     placeName: "Socotra", countryCode: "YE", lat: 12.46, lng: 54.01,
     tags: ["Yemen", "endemic", "islands", "remote", "rare"], category: "destination",
   },
@@ -332,164 +333,158 @@ const JAMES_SAVES: SaveInput[] = [
 const NINA_SAVES: SaveInput[] = [
   {
     url: "https://maps.app.goo.gl/Kz8wNrQzJf7jDmXt7",
-    content: "shimokitazawa keeps coming up every time i research tokyo. saved this bar from a friend's google maps list. want to spend at least 2 evenings in this neighbourhood",
+    note: "shimokitazawa keeps coming up every time i research tokyo. saved this bar from a friend's google maps list. want to spend at least 2 evenings in this neighbourhood",
     scrapedTitle: "Shirube · Izakaya · Shimokitazawa, Tokyo",
-    scrapedDescription: "Natural wine and sake izakaya in Shimokitazawa. Opens 6pm, closed Tuesdays. Known for rotating small plates and an interesting bottle list. Mostly neighborhood regulars. ·  4.7 ★ · 186 reviews",
+    description: "Natural wine and sake izakaya in Shimokitazawa — rotating small plates, interesting bottle list, mostly neighborhood regulars. Opens 6pm, closed Tuesdays.",
     placeName: "Tokyo", countryCode: "JP", lat: 35.69, lng: 139.69,
-    tags: ["Japan", "neighborhoods", "music", "wine", "food"], category: "destination",
+    tags: ["Japan", "neighborhoods", "music", "wine", "food"], category: "bar",
   },
   {
     url: "https://www.eater.com/22327801/ikseon-dong-seoul-guide-restaurants-bars",
-    content: "ikseon-dong for the converted hanok bars. this eater piece convinced me seoul has something tokyo doesn't right now",
+    note: "ikseon-dong for the converted hanok bars. this eater piece convinced me seoul has something tokyo doesn't right now",
     scrapedTitle: "Ikseon-dong Is Seoul's Most Interesting Neighbourhood Right Now",
-    scrapedDescription: "Ikseon-dong sits between the old Jongno district and the modern city — Korean hanok buildings converted into wine bars, omakase spots, and natural wine caves. The energy is different from Hongdae or Itaewon. More considered. The contrast between the architecture and what's inside is the whole thing...",
+    description: "Ikseon-dong's Korean hanok buildings converted into wine bars and omakase spots — the contrast between traditional architecture and what's inside is the whole point.",
     placeName: "Seoul", countryCode: "KR", lat: 37.57, lng: 126.98,
-    tags: ["Korea", "food", "bars", "design", "neighborhoods"], category: "destination",
+    tags: ["Korea", "food", "bars", "design", "neighborhoods"], category: "neighborhood",
   },
   {
-    url: "https://www.theguardian.com/travel/2024/mar/18/copenhagen-food-guide-beyond-noma",
-    content: "post-noma copenhagen food guide. geranium is out of budget but the vesterbro natural wine spots look really good. keeping this for an october long weekend",
-    scrapedTitle: "Copenhagen beyond Noma: where to eat in Denmark's capital now",
-    scrapedDescription: "Noma closed its restaurant in 2024. What's left is better in some ways — the Noma generation has scattered across the city. Geranium still has three stars. The interesting eating is at places like Lillebror, the Empirical Spirits bar, and the cluster of natural wine spots in Vesterbro...",
-    placeName: "Copenhagen", countryCode: "DK", lat: 55.68, lng: 12.57,
-    tags: ["Denmark", "food", "restaurants", "wine", "design"], category: "destination",
+    url: "https://www.timeout.com/amsterdam/art/best-museums-in-amsterdam",
+    note: "the moco museum looks more interesting than the rijksmuseum honestly. banksy + dali in the same place?",
+    scrapedTitle: "The 12 best museums in Amsterdam right now",
+    description: "Amsterdam's MOCO Museum pairs Banksy and Dalí in a 17th-century mansion on Museumplein — smaller and more focused than the Rijksmuseum, no advance booking needed.",
+    placeName: "Amsterdam", countryCode: "NL", lat: 52.36, lng: 4.90,
+    tags: ["Netherlands", "art", "design", "museums", "city"], category: "museum",
   },
   {
-    url: "https://www.frieze.com/article/mexico-city-art-guide-galleries-roma-norte",
-    content: "frieze did a whole piece on roma norte galleries. kurimanzutto is the main one but there's a whole circuit of smaller spaces nearby. this needs a proper trip not just 4 days",
-    scrapedTitle: "Mexico City's Art Scene: The Galleries Shaping a New Era",
-    scrapedDescription: "Roma Norte has become one of the world's most interesting art neighbourhoods in the past decade. Kurimanzutto is the anchor, but the smaller spaces around Álvaro Obregón — Parque Galería, Labor — are where the real energy is. The circuit takes two full days to do properly...",
+    url: "https://www.eater.com/maps/best-restaurants-paris-where-to-eat",
+    note: "classic eater map but the natural wine bar section is actually useful. need to stop just pinning these and go",
+    scrapedTitle: "Where to Eat in Paris Right Now",
+    description: "Eater Paris's natural wine bar picks cover the spots that locals actually fill — the Oberkampf and Pigalle sections are where the real dining happens.",
+    placeName: "Paris", countryCode: "FR", lat: 48.86, lng: 2.35,
+    tags: ["France", "food", "wine", "bistro", "city"], category: "restaurant",
+  },
+  {
+    url: "https://www.wallpaper.com/art/best-contemporary-art-galleries-berlin",
+    note: "the neugerriemschneider gallery has been on my list for years. east berlin gallery district looks like it could eat a whole day",
+    scrapedTitle: "The best contemporary art galleries in Berlin",
+    description: "Berlin's East gallery district anchored by neugerriemschneider — serious contemporary work in former industrial spaces, most open Tuesday–Saturday.",
+    placeName: "Berlin", countryCode: "DE", lat: 52.52, lng: 13.40,
+    tags: ["Germany", "art", "galleries", "design", "city"], category: "gallery",
+  },
+  {
+    url: "https://www.cntraveler.com/story/where-to-eat-in-mexico-city",
+    note: "condesa keeps coming up for where to actually base yourself. the restaurant density looks insane for a small neighbourhood",
+    scrapedTitle: "Where to Eat in Mexico City Right Now",
+    description: "Condesa and Roma Norte in Mexico City offer some of the highest restaurant density per block in Latin America — tasting menus alongside excellent tacos on the same street.",
     placeName: "Mexico City", countryCode: "MX", lat: 19.43, lng: -99.13,
-    tags: ["Mexico", "art", "galleries", "design", "contemporary"], category: "destination",
+    tags: ["Mexico", "food", "restaurants", "city", "neighborhoods"], category: "neighborhood",
   },
   {
-    url: "https://maps.app.goo.gl/vRmP2KsL9XBcqTuw8",
-    content: "meyhane dinner in karaköy that a friend put on her google maps. raki and small plates until midnight, the antique dealers in çukurcuma nearby",
-    scrapedTitle: "Antiochia Meyhane · Restaurant · Karaköy, Istanbul",
-    scrapedDescription: "Traditional meyhane in Karaköy serving Antakya-style meze and raki. Open evenings only, no reservations. The stuffed vine leaves and the lamb liver are what people come back for. · 4.6 ★ · 412 reviews",
-    placeName: "Istanbul", countryCode: "TR", lat: 41.01, lng: 28.97,
-    tags: ["Turkey", "art", "antiques", "food", "meyhane"], category: "destination",
+    url: "https://www.timeout.com/hong-kong/art/hong-kong-art-galleries",
+    note: "art basel hong kong is in march. staying for a week after to see the permanent galleries looks actually viable now",
+    scrapedTitle: "The best art galleries in Hong Kong",
+    description: "Hong Kong's gallery scene runs from Pedder Street to Wong Chuk Hang — Art Basel in March is the peak, but the permanent spaces justify a standalone visit.",
+    placeName: "Hong Kong", countryCode: "HK", lat: 22.32, lng: 114.17,
+    tags: ["Hong Kong", "art", "galleries", "city", "food"], category: "gallery",
   },
   {
-    url: "https://www.artsy.net/article/artsy-editorial-vienna-art-week-galleries-not-miss",
-    content: "vienna art week is in november. might time a trip around it. the secession building alone is worth it and the kaffeehäuser thing is actually real",
-    scrapedTitle: "Vienna Art Week: The Galleries and Shows Not to Miss",
-    scrapedDescription: "Vienna Art Week runs every November — a week of gallery openings, museum previews, and collector events across the city. The Secession is always essential. The Kunsthalle Wien shows are consistently underrated. The coffeehouse culture as a working institution is not a tourist myth...",
-    placeName: "Vienna", countryCode: "AT", lat: 48.21, lng: 16.37,
-    tags: ["Austria", "art", "museums", "coffee", "architecture"], category: "destination",
-  },
-  {
-    url: "https://www.seriouseats.com/best-restaurants-taipei-taiwan-guide",
-    content: "serious eats taipei guide. the night market eating sounds genuinely different. also the fact that you can hike a mountain 20 minutes from downtown??",
-    scrapedTitle: "Where to Eat in Taipei: The Serious Eats Guide",
-    scrapedDescription: "Taipei is a genuinely great food city concentrated in a very small area. The night market circuit — Shilin, Raohe, Ningxia — rewards return visits because you keep finding things. The mountain trails above Beitou start at an MRT station and feel nothing like a city hike...",
-    placeName: "Taipei", countryCode: "TW", lat: 25.03, lng: 121.56,
-    tags: ["Taiwan", "food", "night market", "hiking", "design"], category: "destination",
-  },
-  {
-    url: "https://www.eater.com/23697283/tbilisi-natural-wine-bars-qvevri-guide",
-    content: "tbilisi natural wine scene. 8000 years of winemaking and you can drink it in a converted soviet building for $3 a glass. this is the one",
-    scrapedTitle: "Tbilisi Is the Natural Wine World's New Capital",
-    scrapedDescription: "Georgia has been making wine in clay qvevri vessels for 8,000 years. Tbilisi's bar scene is built entirely on this — amber wines, skin-contact whites, small producers from Kakheti arriving by the case. The bars themselves are in Soviet-era apartment blocks and postindustrial buildings from the 1970s...",
-    placeName: "Tbilisi", countryCode: "GE", lat: 41.69, lng: 44.83,
-    tags: ["Georgia", "wine", "bars", "Soviet architecture", "affordable"], category: "destination",
-  },
-  {
-    url: "https://www.theguardian.com/travel/2022/jun/14/serralves-museum-porto-portugal-guide",
-    content: "the serralves keeps coming up when people talk about underrated european museums. álvaro siza building. going to try to get there in october",
-    scrapedTitle: "Serralves Museum: Porto's world-class contemporary art secret",
-    scrapedDescription: "The Serralves Museum sits in a 1930s Art Deco villa with an Álvaro Siza-designed extension in the grounds. The permanent collection has Serra, Hockney, and Paolozzi. The park alone is worth the entrance fee. Porto's Baixa bookshops are a short tram ride from the museum gates...",
-    placeName: "Porto", countryCode: "PT", lat: 41.15, lng: -8.61,
-    tags: ["Portugal", "art", "museum", "architecture", "Álvaro Siza"], category: "destination",
-  },
-  {
-    url: "https://www.dezeen.com/2023/03/15/marrakech-design-guide-majorelle-ysl-museum/",
-    content: "the dezeen marrakech design guide is actually useful. jardin majorelle + the souk ceramics circuit. want a riad with a courtyard, not a hotel",
-    scrapedTitle: "Marrakech design guide: from Majorelle Garden to the YSL Museum",
-    scrapedDescription: "Marrakech has a complicated design culture — traditional medina crafts alongside YSL's maximalist garden and a new wave of architect-designed riads. The ceramics in the souk around Bab Ghemat are the real thing, not tourist stock. A riad stay changes the experience completely...",
-    placeName: "Marrakech", countryCode: "MA", lat: 31.63, lng: -7.99,
-    tags: ["Morocco", "design", "art", "riad", "ceramics"], category: "destination",
-  },
-  {
-    url: "https://www.theguardian.com/travel/2024/feb/26/lx-factory-lisbon-guide-creative-hub",
-    content: "lx factory on a sunday. the ler devagar bookshop looks insane. need to pair this with the berardo for a proper art day in lisbon",
-    scrapedTitle: "LX Factory: Lisbon's creative hub that still feels real",
-    scrapedDescription: "LX Factory occupies a 19th-century textile complex in Alcântara. On Sundays the market takes over the cobbled courtyard. The Ler Devagar bookshop — a three-storey former printing hall filled with books and a suspended bicycle — is genuinely extraordinary. The Museu Berardo is 15 minutes by tram...",
+    url: "https://www.eater.com/maps/best-restaurants-lisbon",
+    note: "the tasca and taberna section in the eater lisbon map is what i actually care about. none of the tourist stuff",
+    scrapedTitle: "Where to Eat in Lisbon Right Now",
+    description: "Lisbon's tascas in Mouraria and Intendente are where the real food is — petiscos, natural wine, and full meals under €25 in rooms that seat twenty people.",
     placeName: "Lisbon", countryCode: "PT", lat: 38.72, lng: -9.14,
-    tags: ["Portugal", "art", "bookshops", "markets", "food"], category: "destination",
+    tags: ["Portugal", "food", "wine", "city", "neighborhoods"], category: "restaurant",
+  },
+  {
+    url: "https://www.wallpaper.com/travel/best-hotels-tokyo",
+    note: "the trunk hotel in shibuya keeps coming up. looks like it actually has a good bar scene attached",
+    scrapedTitle: "The best hotels in Tokyo",
+    description: "Trunk Hotel in Shibuya is the design-forward pick — small, serious bar program, and positioned between Daikanyama and the station.",
+    placeName: "Tokyo", countryCode: "JP", lat: 35.66, lng: 139.70,
+    tags: ["Japan", "design", "hotel", "bar", "city"], category: "hotel",
+  },
+  {
+    url: "https://www.cntraveler.com/story/best-restaurants-new-york",
+    note: "actually planning a proper food trip to new york in the spring. the tribeca and lower east side picks look right",
+    scrapedTitle: "The Best Restaurants in New York City Right Now",
+    description: "New York's best dining right now is concentrated in Tribeca and the Lower East Side — the list skews tasting menu and natural wine, with a few serious taco counters.",
+    placeName: "New York City", countryCode: "US", lat: 40.71, lng: -74.01,
+    tags: ["USA", "food", "restaurants", "city", "art"], category: "restaurant",
   },
 ];
 
-// ── Decision questions per profile ────────────────────────────────────────────
+type ProfileSaves = {
+  userId: string;
+  saves: SaveInput[];
+  questions: string[];
+};
 
-const ELENA_QUESTIONS = [
-  "I have 5 weeks in January. Should I go to Oaxaca or Puglia? I want slow mornings, fermented things, markets that aren't staged for visitors, and somewhere that doesn't feel packaged.",
-  "How do I structure a month in Portugal — Lisbon, the Alentejo wine country, and then Porto? I move slowly and want each place to earn its time.",
-  "October: Crete or Fez? I want to eat extremely well, affordably, without a reservation system or a tasting menu. Which one wins?",
+const PROFILES: ProfileSaves[] = [
+  {
+    userId: "demo_elena",
+    saves: ELENA_SAVES,
+    questions: [
+      "I have January free and want 3–4 weeks somewhere slow. Should I go back to Lisbon or finally try Thessaloniki?",
+      "November week — Norcia for truffles or Valletta for something easier? I've been moving fast lately and want to slow down.",
+    ],
+  },
+  {
+    userId: "demo_james",
+    saves: JAMES_SAVES,
+    questions: [
+      "August, three weeks, I want real wilderness with minimal infrastructure. Svalbard or Kyrgyzstan?",
+      "I want to do a high-altitude Central Asia trip — structure 3 weeks between Kyrgyzstan and a side trip to Ladakh.",
+    ],
+  },
+  {
+    userId: "demo_nina",
+    saves: NINA_SAVES,
+    questions: [
+      "I have 5 days each in Tokyo and Seoul — which city do I go deeper on for art and food, and which do I treat as a stopover?",
+      "Spring week in Europe. Paris or Berlin for the galleries and restaurant scene?",
+    ],
+  },
 ];
-
-const JAMES_QUESTIONS = [
-  "Patagonia vs the Faroe Islands. I have 3 weeks in August and I want relentless hiking, dramatic views, and almost no other hikers. Which one?",
-  "Mongolia and Kyrgyzstan back to back — is that too much? How do I sequence 3 weeks between them so neither feels rushed?",
-  "Greenland or Svalbard for polar solitude in February. I'm not interested in a cruise ship or guided luxury — I want the real thing.",
-  "I keep circling Kamchatka and Socotra. One has volcanoes, one has dragon blood trees. Which one actually delivers on isolation and strangeness?",
-];
-
-const NINA_QUESTIONS = [
-  "Tokyo or Seoul for 5 days in April. I want to feel completely inside one visual culture — not tourist food, not highlights, the real texture of a neighborhood. Which city?",
-  "Structure 10 days in Japan: I want Tokyo, at least one night in a proper ryokan, and Kyoto. Is there anywhere else that earns its place in that window?",
-  "Copenhagen or Vienna for a long October weekend — I want galleries and a serious meal each night. Which city has the edge right now?",
-  "Tbilisi or Marrakech: I want a city that gets under your skin, the kind that surprises you still on day four. Which one?",
-];
-
-// ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("Clearing existing demo data...");
-  await db.delete(decisionsTable).where(inArray(decisionsTable.userId, DEMO_USER_IDS));
-  await db.delete(savesTable).where(inArray(savesTable.userId, DEMO_USER_IDS));
-  console.log("Cleared.\n");
+  console.log("Seeding demo profiles...\n");
 
-  const profiles: { userId: string; name: string; saves: typeof savesTable.$inferSelect[]; questions: string[] }[] = [
-    { userId: "demo_elena", name: "Elena Vasquez", saves: [], questions: ELENA_QUESTIONS },
-    { userId: "demo_james", name: "James Okoro", saves: [], questions: JAMES_QUESTIONS },
-    { userId: "demo_nina", name: "Nina Chen", saves: [], questions: NINA_QUESTIONS },
-  ];
+  for (const profile of PROFILES) {
+    console.log(`\n── ${profile.userId} ──`);
 
-  const rawSaves = [ELENA_SAVES, JAMES_SAVES, NINA_SAVES];
+    // Clear existing data
+    const existingSaves = await db.select().from(savesTable).where(eq(savesTable.userId, profile.userId));
+    if (existingSaves.length > 0) {
+      await db.delete(decisionsTable).where(eq(decisionsTable.userId, profile.userId));
+      await db.delete(savesTable).where(eq(savesTable.userId, profile.userId));
+      console.log(`  Cleared existing data`);
+    }
 
-  // Insert saves
-  for (let i = 0; i < profiles.length; i++) {
-    const profile = profiles[i];
-    const saveInputs = rawSaves[i];
-    console.log(`Inserting ${saveInputs.length} saves for ${profile.name}...`);
-
-    for (const s of saveInputs) {
+    // Insert saves
+    const insertedSaves: typeof savesTable.$inferSelect[] = [];
+    for (const save of profile.saves) {
       const [inserted] = await db.insert(savesTable).values({
         userId: profile.userId,
-        url: s.url,
-        content: s.content,
-        scrapedTitle: s.scrapedTitle,
-        scrapedDescription: s.scrapedDescription,
-        placeName: s.placeName,
-        countryCode: s.countryCode,
-        lat: s.lat,
-        lng: s.lng,
-        tags: JSON.stringify(s.tags),
-        category: s.category,
+        note: save.note,
+        url: save.url,
+        scrapedTitle: save.scrapedTitle,
+        description: save.description,
+        placeName: save.placeName,
+        countryCode: save.countryCode,
+        lat: save.lat,
+        lng: save.lng,
+        tags: JSON.stringify(save.tags),
+        category: save.category,
       }).returning();
-      profile.saves.push(inserted);
+      insertedSaves.push(inserted);
     }
-    console.log(`  Inserted ${profile.saves.length} saves.\n`);
-  }
+    console.log(`  Inserted ${insertedSaves.length} saves`);
 
-  // Generate decisions
-  for (const profile of profiles) {
-    console.log(`\nGenerating decisions for ${profile.name} (${profile.questions.length} questions)...`);
+    // Generate decisions
     for (const question of profile.questions) {
-      console.log(`  Q: "${question.slice(0, 80)}..."`);
+      console.log(`  Generating decision: "${question.slice(0, 60)}..."`);
       try {
-        const { rawContent, resultJson, savesSnapshot } = await generateDecision(question, profile.saves);
+        const { rawContent, resultJson, savesSnapshot } = await generateDecision(question, insertedSaves);
         await db.insert(decisionsTable).values({
           userId: profile.userId,
           question,

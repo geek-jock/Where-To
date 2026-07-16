@@ -9,11 +9,10 @@
 export interface Save {
   id: number;
   userId: string;
-  content: string;
+  note?: string | null;
   url?: string | null;
   scrapedTitle?: string | null;
-  scrapedDescription?: string | null;
-  scrapedImage?: string | null;
+  description?: string | null;
   placeName?: string | null;
   countryCode?: string | null;
   lat?: number | null;

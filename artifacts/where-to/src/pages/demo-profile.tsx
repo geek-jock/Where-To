@@ -12,9 +12,9 @@ const API_BASE = `${basePath}/api`;
 interface DemoSave {
   id: number;
   url: string | null;
-  content: string | null;
+  note: string | null;
   scrapedTitle: string | null;
-  scrapedDescription: string | null;
+  description: string | null;
   placeName: string | null;
   countryCode: string | null;
   tags: string[] | null;
@@ -230,7 +230,7 @@ export default function DemoProfile() {
                           )}
                         </td>
                         <td className="py-4 align-top">
-                          <p className="text-sm text-muted-foreground leading-relaxed mb-2">{save.content}</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed mb-2">{save.note}</p>
                           {save.url && (
                             <a
                               href={save.url}

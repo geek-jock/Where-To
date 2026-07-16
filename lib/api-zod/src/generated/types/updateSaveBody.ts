@@ -8,10 +8,9 @@
 
 export interface UpdateSaveBody {
   scrapedTitle?: string | null;
-  scrapedDescription?: string | null;
-  scrapedImage?: string | null;
+  description?: string | null;
   placeName?: string | null;
-  content?: string | null;
+  note?: string | null;
   tags?: string[] | null;
   category?: string | null;
   officialLink?: string | null;
