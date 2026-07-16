@@ -270,11 +270,15 @@ export function GroupVerdictCard({ question, verdict, whoGetsWhat, theSeam }: Gr
 
 async function downloadElementAsPng(element: HTMLElement, filename: string) {
   const { toPng } = await import("html-to-image");
-  const dataUrl = await toPng(element, {
-    width: CARD_W,
-    height: CARD_H,
-    pixelRatio: 1,
-  });
+  const opts = { width: CARD_W, height: CARD_H, pixelRatio: 1 };
+
+  // html-to-image needs 2–3 calls for externally-loaded fonts (e.g. Google
+  // Fonts) to be embedded. The first call fetches them into its internal
+  // cache; subsequent calls actually encode them into the PNG.
+  await toPng(element, opts);
+  await toPng(element, opts);
+  const dataUrl = await toPng(element, opts);
+
   const a = document.createElement("a");
   a.href = dataUrl;
   a.download = filename;
@@ -298,10 +302,15 @@ export function TravelPatternsDownloadButton({ verdictJson }: TravelPatternsDown
     if (!isGenerating || !cardRef.current || hasTriggered.current) return;
     hasTriggered.current = true;
 
-    downloadElementAsPng(cardRef.current, "travel-patterns.png").finally(() => {
-      setIsGenerating(false);
-      hasTriggered.current = false;
-    });
+    // Small delay so the browser paints the off-screen card before capture.
+    const id = setTimeout(() => {
+      if (!cardRef.current) return;
+      downloadElementAsPng(cardRef.current, "travel-patterns.png").finally(() => {
+        setIsGenerating(false);
+        hasTriggered.current = false;
+      });
+    }, 100);
+    return () => clearTimeout(id);
   }, [isGenerating]);
 
   return (
@@ -353,10 +362,15 @@ export function GroupVerdictDownloadButton({ question, verdictJson }: GroupVerdi
     if (!isGenerating || !cardRef.current || hasTriggered.current) return;
     hasTriggered.current = true;
 
-    downloadElementAsPng(cardRef.current, "group-verdict.png").finally(() => {
-      setIsGenerating(false);
-      hasTriggered.current = false;
-    });
+    // Small delay so the browser paints the off-screen card before capture.
+    const id = setTimeout(() => {
+      if (!cardRef.current) return;
+      downloadElementAsPng(cardRef.current, "group-verdict.png").finally(() => {
+        setIsGenerating(false);
+        hasTriggered.current = false;
+      });
+    }, 100);
+    return () => clearTimeout(id);
   }, [isGenerating]);
 
   return (
