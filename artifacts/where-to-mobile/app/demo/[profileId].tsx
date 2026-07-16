@@ -74,16 +74,15 @@ export default function DemoProfile() {
   const [activeTab, setActiveTab] = useState<Tab>("question");
   const [activeDecisionId, setActiveDecisionId] = useState<number | null>(null);
 
-  const loadProfile = () => {
+  const loadProfile = (id: string) => {
     setLoading(true);
     setFetchError(false);
-    fetch(`${API_BASE}/demo`, { cache: "no-store" })
+    fetch(`${API_BASE}/demo/profiles/${encodeURIComponent(id)}`, { cache: "no-store" })
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
+        return r.json() as Promise<DemoProfile>;
       })
-      .then((data: { profiles: DemoProfile[] }) => {
-        const found = data.profiles.find(p => p.id === profileId) ?? null;
+      .then(found => {
         setProfile(found);
         if (found?.decisions?.[0]) {
           setActiveDecisionId(found.decisions[0].id);
@@ -94,7 +93,7 @@ export default function DemoProfile() {
   };
 
   useEffect(() => {
-    loadProfile();
+    if (profileId) loadProfile(profileId);
   }, [profileId]);
 
   const s = styles(colors);
@@ -119,7 +118,7 @@ export default function DemoProfile() {
       ) : fetchError ? (
         <View style={s.center}>
           <Text style={s.muted}>Couldn't load profile — check your connection.</Text>
-          <Pressable onPress={loadProfile} style={{ marginTop: 8 }}>
+          <Pressable onPress={() => profileId && loadProfile(profileId)} style={{ marginTop: 8 }}>
             <Text style={s.linkText}>Try again</Text>
           </Pressable>
           <Pressable onPress={() => router.back()} style={{ marginTop: 4 }}>

@@ -137,6 +137,32 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /demo/profiles/:id — single demo profile with saves + decisions
+router.get("/profiles/:id", async (req, res) => {
+  try {
+    const profileId = req.params.id ?? "";
+    const profile = DEMO_PROFILES.find(p => p.id === profileId);
+    if (!profile) {
+      res.status(404).json({ error: "Profile not found" });
+      return;
+    }
+
+    const [saves, decisions] = await Promise.all([
+      db.select().from(savesTable).where(eq(savesTable.userId, profileId)),
+      db.select().from(decisionsTable).where(eq(decisionsTable.userId, profileId)),
+    ]);
+
+    res.json({
+      ...profile,
+      saves: saves.map(s => ({ ...s, tags: parseTags(s.tags) })),
+      decisions: decisions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to load demo profile" });
+  }
+});
+
 // GET /demo/trips/:id — full trip detail with overview notes, decisions, comments
 router.get("/trips/:id", async (req, res) => {
   try {
