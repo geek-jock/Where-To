@@ -8,11 +8,20 @@ import {
   useGeocodeSave,
   useUpdateSave,
   useTagSave,
-  getListSavesQueryKey 
+  getListSavesQueryKey,
+  useListFriends,
+  useListFriendRequests,
+  useSendFriendRequest,
+  useRespondFriendRequest,
+  useRevokeFriendShare,
+  useGetFriendSaves,
+  getListFriendsQueryKey,
+  getListFriendRequestsQueryKey,
+  getGetFriendSavesQueryKey,
 } from "@workspace/api-client-react";
-import type { Save } from "@workspace/api-client-react";
+import type { Save, Friend, SaveShareRequestWithSender } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Maximize2, ExternalLink, Pencil, X, Check, Tag, Building2, UtensilsCrossed, Star, TreePine, Landmark, ShoppingBag } from "lucide-react";
+import { Trash2, Link as LinkIcon, Plus, Loader2, Globe, Bookmark, MapPin, MapPinOff, List, Map, Maximize2, ExternalLink, Pencil, X, Check, Tag, Building2, UtensilsCrossed, Star, TreePine, Landmark, ShoppingBag, UserPlus, Users, ChevronDown, ChevronRight, Mail, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -304,6 +313,252 @@ function SaveDetailDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FriendSavesPanel({ friend }: { friend: Friend }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: saves = [], isLoading } = useGetFriendSaves(friend.userId, {
+    query: { queryKey: getGetFriendSavesQueryKey(friend.userId), enabled: expanded },
+  });
+
+  const displayName = friend.displayName || friend.email || friend.userId;
+
+  return (
+    <div className="border border-border">
+      <button
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div className="flex items-center gap-3">
+          {friend.avatarUrl ? (
+            <img src={friend.avatarUrl} alt={displayName} className="w-8 h-8 rounded-full object-cover" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+          <div className="text-left">
+            <p className="text-sm font-medium text-foreground">{displayName}</p>
+            {friend.email && friend.displayName && (
+              <p className="text-xs text-muted-foreground">{friend.email}</p>
+            )}
+          </div>
+        </div>
+        {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-border px-5 py-4">
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+            </div>
+          ) : saves.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic text-center py-4">No saves yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {saves.map(save => (
+                <div key={save.id} className="border border-border p-4 bg-card">
+                  {save.category && (
+                    <div className="mb-2"><CategoryBadge category={save.category} /></div>
+                  )}
+                  <p className="text-sm font-medium font-serif line-clamp-2 mb-1">
+                    {save.scrapedTitle || save.placeName || save.note?.slice(0, 60) || "Saved"}
+                  </p>
+                  {save.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{save.description}</p>
+                  )}
+                  {save.placeName && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+                      {save.placeName}
+                    </p>
+                  )}
+                  {save.tags && save.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {save.tags.slice(0, 3).map(tag => (
+                        <span key={tag} className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium tracking-wide border border-border/60 text-muted-foreground bg-muted/20 rounded-sm">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FriendsSection() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: friends = [], isLoading: friendsLoading } = useListFriends();
+  const { data: incomingRequests = [] } = useListFriendRequests();
+  const sendRequest = useSendFriendRequest();
+  const respondRequest = useRespondFriendRequest();
+  const revokeShare = useRevokeFriendShare();
+
+  const [showShareForm, setShowShareForm] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+
+  const invalidateFriends = () => {
+    queryClient.invalidateQueries({ queryKey: getListFriendsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListFriendRequestsQueryKey() });
+  };
+
+  const handleSendRequest = async () => {
+    const email = emailInput.trim();
+    if (!email) return;
+    try {
+      await sendRequest.mutateAsync({ data: { email } });
+      setEmailInput("");
+      setShowShareForm(false);
+      toast({ title: "Request sent", description: `An invite was sent to ${email}.` });
+    } catch (err: any) {
+      const msg = err?.message ?? "";
+      if (msg.includes("already exists")) {
+        toast({ title: "Already sent", description: "You already have a pending or active request with this person.", variant: "destructive" });
+      } else if (msg.includes("yourself")) {
+        toast({ title: "That's you", description: "You can't share with yourself.", variant: "destructive" });
+      } else {
+        toast({ title: "Failed to send request", variant: "destructive" });
+      }
+    }
+  };
+
+  const handleRespond = async (id: number, action: "accept" | "decline") => {
+    try {
+      await respondRequest.mutateAsync({ id, data: { action } });
+      invalidateFriends();
+      toast({ title: action === "accept" ? "Request accepted" : "Request declined" });
+    } catch {
+      toast({ title: "Failed to respond", variant: "destructive" });
+    }
+  };
+
+  const handleRevoke = async (userId: string, name: string) => {
+    try {
+      await revokeShare.mutateAsync({ userId });
+      invalidateFriends();
+      toast({ title: "Sharing revoked", description: `You've stopped sharing with ${name}.` });
+    } catch {
+      toast({ title: "Failed to revoke sharing", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-serif font-semibold">Friends' saves</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Read-only view of saves from people you've connected with</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowShareForm(s => !s)}
+          className="gap-1.5"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          Share my saves
+        </Button>
+      </div>
+
+      {/* Share form */}
+      {showShareForm && (
+        <div className="border border-border p-5 bg-card animate-in fade-in space-y-3">
+          <p className="text-sm font-medium">Invite someone to share saves with you</p>
+          <p className="text-xs text-muted-foreground">They'll see your full save library and you'll see theirs — read-only, bilateral.</p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="friend@example.com"
+              value={emailInput}
+              onChange={e => setEmailInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSendRequest()}
+              className="flex-1"
+              type="email"
+            />
+            <Button onClick={handleSendRequest} disabled={!emailInput.trim() || sendRequest.isPending} size="sm">
+              {sendRequest.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+              <span className="ml-1.5">Send</span>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowShareForm(false); setEmailInput(""); }}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Pending incoming requests */}
+      {incomingRequests.length > 0 && (
+        <div className="border border-primary/30 bg-primary/5 p-4 space-y-2">
+          <p className="text-xs font-semibold tracking-wider uppercase text-primary/70">Pending requests</p>
+          {incomingRequests.map(req => (
+            <div key={req.id} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Mail className="h-4 w-4 text-primary flex-shrink-0" />
+                <p className="text-sm text-foreground truncate">
+                  <span className="font-medium">{req.senderEmail ?? req.fromUserId}</span>
+                  <span className="text-muted-foreground"> wants to share their saves with you</span>
+                </p>
+              </div>
+              <div className="flex gap-1.5 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => handleRespond(req.id, "accept")}
+                  disabled={respondRequest.isPending}
+                >
+                  <Check className="h-3 w-3 mr-1" /> Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => handleRespond(req.id, "decline")}
+                  disabled={respondRequest.isPending}
+                >
+                  Decline
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Friends list */}
+      {friendsLoading ? (
+        <Skeleton className="h-14 w-full" />
+      ) : friends.length === 0 ? (
+        <div className="text-center py-10 border border-dashed border-border text-muted-foreground">
+          <Users className="h-8 w-8 mx-auto mb-3 opacity-20" />
+          <p className="text-sm">No connected friends yet.</p>
+          <p className="text-xs mt-1 opacity-70">Share your saves with someone and they'll appear here once they accept.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {friends.map(friend => (
+            <div key={friend.userId} className="relative">
+              <FriendSavesPanel friend={friend} />
+              <button
+                className="absolute top-4 right-10 text-muted-foreground hover:text-destructive transition-colors p-1"
+                title="Stop sharing"
+                onClick={() => handleRevoke(friend.userId, friend.displayName || friend.email || "this person")}
+              >
+                <UserX className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -747,6 +1002,8 @@ export default function Saves() {
           </div>
         )}
       </div>
+
+      <FriendsSection />
 
       <SaveDetailDialog
         save={detailSave}

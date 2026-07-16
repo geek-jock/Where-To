@@ -144,6 +144,101 @@ export const DeleteSaveResponse = zod.object({
 });
 
 /**
+ * @summary List connected friends (accepted bilateral shares)
+ */
+export const ListFriendsResponseItem = zod.object({
+  userId: zod.string(),
+  email: zod.string().nullish(),
+  displayName: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
+});
+export const ListFriendsResponse = zod.array(ListFriendsResponseItem);
+
+/**
+ * @summary Send a save-sharing request to another user by email
+ */
+export const SendFriendRequestBody = zod.object({
+  email: zod.string(),
+});
+
+/**
+ * @summary List pending incoming share requests
+ */
+export const ListFriendRequestsResponseItem = zod
+  .object({
+    id: zod.number(),
+    fromUserId: zod.string(),
+    toEmail: zod.string(),
+    toUserId: zod.string().nullish(),
+    status: zod.enum(["pending", "accepted", "declined", "revoked"]),
+    createdAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      senderEmail: zod.string().nullish(),
+    }),
+  );
+export const ListFriendRequestsResponse = zod.array(
+  ListFriendRequestsResponseItem,
+);
+
+/**
+ * @summary Accept or decline a pending share request
+ */
+export const RespondFriendRequestParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RespondFriendRequestBody = zod.object({
+  action: zod.enum(["accept", "decline"]),
+});
+
+export const RespondFriendRequestResponse = zod.object({
+  id: zod.number(),
+  fromUserId: zod.string(),
+  toEmail: zod.string(),
+  toUserId: zod.string().nullish(),
+  status: zod.enum(["pending", "accepted", "declined", "revoked"]),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Revoke sharing with a friend
+ */
+export const RevokeFriendShareParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const RevokeFriendShareResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Get a connected friend's saves (read-only)
+ */
+export const GetFriendSavesParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const GetFriendSavesResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  note: zod.string().nullish(),
+  url: zod.string().nullish(),
+  scrapedTitle: zod.string().nullish(),
+  description: zod.string().nullish(),
+  placeName: zod.string().nullish(),
+  countryCode: zod.string().nullish(),
+  lat: zod.number().nullish(),
+  lng: zod.number().nullish(),
+  tags: zod.array(zod.string()).nullish(),
+  category: zod.string().nullish(),
+  officialLink: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const GetFriendSavesResponse = zod.array(GetFriendSavesResponseItem);
+
+/**
  * @summary Create a new AI travel decision
  */
 export const CreateDecisionBody = zod.object({

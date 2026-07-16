@@ -18,6 +18,8 @@ tags:
     description: URL metadata scraping
   - name: trips
     description: Group trips
+  - name: friends
+    description: Bilateral friend saves sharing
 
 paths:
   /healthz:
@@ -162,6 +164,132 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteResult"
+
+  /friends:
+    get:
+      operationId: listFriends
+      tags: [friends]
+      summary: List connected friends (accepted bilateral shares)
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of friends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Friend"
+
+  /friends/request:
+    post:
+      operationId: sendFriendRequest
+      tags: [friends]
+      summary: Send a save-sharing request to another user by email
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendFriendRequestBody"
+      responses:
+        "201":
+          description: Request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveShareRequest"
+
+  /friends/requests:
+    get:
+      operationId: listFriendRequests
+      tags: [friends]
+      summary: List pending incoming share requests
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of pending requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SaveShareRequestWithSender"
+
+  /friends/requests/{id}:
+    patch:
+      operationId: respondFriendRequest
+      tags: [friends]
+      summary: Accept or decline a pending share request
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondFriendRequestBody"
+      responses:
+        "200":
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveShareRequest"
+
+  /friends/{userId}:
+    delete:
+      operationId: revokeFriendShare
+      tags: [friends]
+      summary: Revoke sharing with a friend
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /friends/{userId}/saves:
+    get:
+      operationId: getFriendSaves
+      tags: [friends]
+      summary: Get a connected friend's saves (read-only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Friend's saves
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Save"
 
   /decisions:
     post:
@@ -899,6 +1027,74 @@ components:
           type: boolean
       required:
         - success
+
+    SaveShareRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        fromUserId:
+          type: string
+        toEmail:
+          type: string
+        toUserId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, accepted, declined, revoked]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - fromUserId
+        - toEmail
+        - status
+        - createdAt
+
+    SaveShareRequestWithSender:
+      allOf:
+        - $ref: "#/components/schemas/SaveShareRequest"
+        - type: object
+          properties:
+            senderEmail:
+              type: string
+              nullable: true
+
+    Friend:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+      required:
+        - userId
+
+    SendFriendRequestBody:
+      type: object
+      properties:
+        email:
+          type: string
+      required:
+        - email
+
+    RespondFriendRequestBody:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [accept, decline]
+      required:
+        - action
 
     ScrapeUrlBody:
       type: object

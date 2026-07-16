@@ -125,6 +125,27 @@ export async function runStartupMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS confirmation_link TEXT
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS save_share_requests (
+        id SERIAL PRIMARY KEY,
+        from_user_id TEXT NOT NULL,
+        to_email TEXT NOT NULL,
+        to_user_id TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS save_share_requests_from_user_idx ON save_share_requests(from_user_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS save_share_requests_to_user_idx ON save_share_requests(to_user_id) WHERE to_user_id IS NOT NULL
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS save_share_requests_to_email_idx ON save_share_requests(to_email)
+    `);
+
     logger.info("Startup migrations complete");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — non-fatal, continuing");

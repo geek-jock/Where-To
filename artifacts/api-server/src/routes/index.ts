@@ -5,6 +5,7 @@ import decisionsRouter from "./decisions";
 import scrapeRouter from "./scrape";
 import demoRouter from "./demo";
 import tripsRouter from "./trips";
+import friendsRouter from "./friends";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use("/decisions", decisionsRouter);
 router.use("/scrape", scrapeRouter);
 router.use("/demo", demoRouter);
 router.use("/trips", tripsRouter);
+router.use("/friends", friendsRouter);
 
 export default router;

@@ -93,6 +93,52 @@ export interface DeleteResult {
   success: boolean;
 }
 
+export type SaveShareRequestStatus =
+  (typeof SaveShareRequestStatus)[keyof typeof SaveShareRequestStatus];
+
+export const SaveShareRequestStatus = {
+  pending: "pending",
+  accepted: "accepted",
+  declined: "declined",
+  revoked: "revoked",
+} as const;
+
+export interface SaveShareRequest {
+  id: number;
+  fromUserId: string;
+  toEmail: string;
+  toUserId?: string | null;
+  status: SaveShareRequestStatus;
+  createdAt: string;
+}
+
+export type SaveShareRequestWithSender = SaveShareRequest & {
+  senderEmail?: string | null;
+};
+
+export interface Friend {
+  userId: string;
+  email?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface SendFriendRequestBody {
+  email: string;
+}
+
+export type RespondFriendRequestBodyAction =
+  (typeof RespondFriendRequestBodyAction)[keyof typeof RespondFriendRequestBodyAction];
+
+export const RespondFriendRequestBodyAction = {
+  accept: "accept",
+  decline: "decline",
+} as const;
+
+export interface RespondFriendRequestBody {
+  action: RespondFriendRequestBodyAction;
+}
+
 export interface ScrapeUrlBody {
   url: string;
 }
