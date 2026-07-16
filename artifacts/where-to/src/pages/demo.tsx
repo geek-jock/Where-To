@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Compass, Loader2, MapPin, Sparkles, ArrowRight } from "lucide-react";
+import { Compass, Loader2, MapPin, Sparkles, ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSignIn } from "@clerk/react/legacy";
 
@@ -37,8 +37,17 @@ interface DemoProfile {
   decisions: DemoDecision[];
 }
 
+interface DemoTripPreview {
+  id: number;
+  name: string;
+  destination: string | null;
+  members: { name: string; initials: string }[];
+  decisions: { status: string; verdictJson: { verdict: string } | null }[];
+}
+
 interface DemoData {
   profiles: DemoProfile[];
+  demoTrip: DemoTripPreview | null;
   seeded: boolean;
 }
 
@@ -106,6 +115,67 @@ export default function Demo() {
             {data.profiles.map(profile => (
               <ProfileCard key={profile.id} profile={profile} />
             ))}
+          </div>
+        )}
+
+        {/* Group trip callout */}
+        {data?.demoTrip && (
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Group trip planning</p>
+              <h2 className="text-2xl font-serif text-foreground">Three people. Three travel styles. One itinerary.</h2>
+            </div>
+            <Link href="/demo/trip" className="block group">
+              <div className="border border-border bg-card p-6 space-y-5 hover:border-primary/40 transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-foreground">{data.demoTrip.name}</p>
+                    {data.demoTrip.destination && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3" />
+                        {data.demoTrip.destination}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex -space-x-1.5">
+                    {data.demoTrip.members.slice(0, 3).map((m, i) => (
+                      <div key={i} className="h-8 w-8 bg-primary/10 border-2 border-background flex items-center justify-center rounded-full">
+                        <span className="text-[10px] font-bold text-primary">{m.initials}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {data.demoTrip.members.length} travellers
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    {data.demoTrip.decisions.length} decisions
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {data.demoTrip.decisions.filter(d => d.status === "done").length} booked
+                  </span>
+                </div>
+
+                {/* Latest verdict preview */}
+                {data.demoTrip.decisions[0]?.verdictJson && (
+                  <div className="pt-3 border-t border-border space-y-1">
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/60">Latest verdict</p>
+                    <p className="text-sm font-serif text-foreground leading-snug">
+                      {data.demoTrip.decisions[0].verdictJson.verdict}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1 text-xs text-primary font-medium group-hover:gap-2 transition-all">
+                  See the full trip <ArrowRight className="h-3 w-3" />
+                </div>
+              </div>
+            </Link>
           </div>
         )}
 

@@ -13,6 +13,7 @@ import History from "./pages/history";
 import DecisionView from "./pages/decision-view";
 import Demo from "./pages/demo";
 import DemoProfile from "./pages/demo-profile";
+import DemoTrip from "./pages/demo-trip";
 import Trips from "./pages/trips";
 import TripDetail from "./pages/trip-detail";
 import TripDecision from "./pages/trip-decision";
@@ -225,6 +226,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/trips">
             <ProtectedRoute component={Trips} />
           </Route>
+          <Route path="/demo/trip" component={DemoTrip} />
           <Route path="/demo/:profileId" component={DemoProfile} />
           <Route path="/demo" component={Demo} />
           <Route>

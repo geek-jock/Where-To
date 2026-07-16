@@ -1,10 +1,18 @@
 import { Router } from "express";
-import { db, savesTable, decisionsTable } from "@workspace/db";
+import {
+  db,
+  savesTable,
+  decisionsTable,
+  tripsTable,
+  tripMembersTable,
+  groupDecisionsTable,
+  decisionCommentsTable,
+} from "@workspace/db";
 import { inArray, eq } from "drizzle-orm";
 
 const router = Router();
 
-const DEMO_PROFILES = [
+export const DEMO_PROFILES = [
   {
     id: "demo_elena",
     name: "Elena Vasquez",
@@ -29,6 +37,7 @@ const DEMO_PROFILES = [
 ];
 
 const DEMO_USER_IDS = DEMO_PROFILES.map(p => p.id);
+const DEMO_TRIP_INVITE_TOKEN = "demo-trip-public";
 
 function parseTags(raw: string | null | undefined): string[] | null {
   if (!raw) return null;
@@ -37,9 +46,10 @@ function parseTags(raw: string | null | undefined): string[] | null {
 
 router.get("/", async (req, res) => {
   try {
-    const [allSaves, allDecisions] = await Promise.all([
+    const [allSaves, allDecisions, demoTrips] = await Promise.all([
       db.select().from(savesTable).where(inArray(savesTable.userId, DEMO_USER_IDS)),
       db.select().from(decisionsTable).where(inArray(decisionsTable.userId, DEMO_USER_IDS)),
+      db.select().from(tripsTable).where(eq(tripsTable.inviteToken, DEMO_TRIP_INVITE_TOKEN)),
     ]);
 
     const profilesWithData = DEMO_PROFILES.map(profile => {
@@ -55,7 +65,43 @@ router.get("/", async (req, res) => {
 
     const hasData = profilesWithData.some(p => p.saves.length > 0);
 
-    res.json({ profiles: profilesWithData, seeded: hasData });
+    // Load demo trip with members, decisions, and comments
+    let demoTrip = null;
+    const trip = demoTrips[0];
+    if (trip) {
+      const [members, groupDecisions] = await Promise.all([
+        db.select().from(tripMembersTable).where(eq(tripMembersTable.tripId, trip.id)),
+        db.select().from(groupDecisionsTable).where(eq(groupDecisionsTable.tripId, trip.id)),
+      ]);
+
+      const decisionsWithComments = await Promise.all(
+        groupDecisions.map(async dec => {
+          const comments = await db
+            .select()
+            .from(decisionCommentsTable)
+            .where(eq(decisionCommentsTable.decisionId, dec.id));
+          return { ...dec, comments };
+        })
+      );
+
+      // Enrich members with profile display info
+      const enrichedMembers = members.map(m => {
+        const profile = DEMO_PROFILES.find(p => p.id === m.userId);
+        return {
+          ...m,
+          name: m.displayName ?? profile?.name ?? m.userId,
+          initials: profile?.initials ?? m.userId.slice(0, 2).toUpperCase(),
+        };
+      });
+
+      demoTrip = {
+        ...trip,
+        members: enrichedMembers,
+        decisions: decisionsWithComments,
+      };
+    }
+
+    res.json({ profiles: profilesWithData, demoTrip, seeded: hasData });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to load demo profiles" });

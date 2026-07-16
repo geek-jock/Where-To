@@ -1,5 +1,7 @@
 /**
- * Seed 3 demo profiles with realistic saves and AI-generated decisions.
+ * Seed 3 demo profiles with realistic saves, AI-generated decisions, travel
+ * profiles, a group trip with 3 decision rooms, comments, and a bilateral
+ * friend share between Elena and Nina.
  *
  * Run:
  *   cd artifacts/api-server && \
@@ -7,9 +9,19 @@
  *     --outfile=/tmp/seed-demo.cjs && node /tmp/seed-demo.cjs
  */
 
-import { db, savesTable, decisionsTable } from "@workspace/db";
+import {
+  db,
+  savesTable,
+  decisionsTable,
+  tripsTable,
+  tripMembersTable,
+  groupDecisionsTable,
+  decisionCommentsTable,
+  userProfilesTable,
+  saveShareRequestsTable,
+} from "@workspace/db";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { verdictJsonSchema } from "@workspace/db";
+import { verdictJsonSchema, groupVerdictJsonSchema } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 
 const DEMO_USER_IDS = ["demo_elena", "demo_james", "demo_nina"];
@@ -422,6 +434,17 @@ const NINA_SAVES: SaveInput[] = [
   },
 ];
 
+// ── Hardcoded travel profiles ──────────────────────────────────────────────────
+
+const TRAVEL_PROFILES: Record<string, string> = {
+  demo_elena:
+    "Slow wanderer anchored by food markets and fermented things. Gravitates toward Southern Europe and Mexico in 3–4 week stretches. Rents a room over a hotel and builds a local routine within days — a market, a bar, a walking circuit. Makes decisions based on seasonal produce and neighbourhood density, not highlights. Avoids anywhere that's been fully discovered.",
+  demo_james:
+    "Extreme terrain chaser with limited patience for infrastructure. Goes where roads end or require permits. Plans in 10–20 day blocks for full wilderness immersion. Allocates budget to permits, guides, and helicopter access — not accommodation. Off-season is the point. Has been to every continent and still has a list.",
+  demo_nina:
+    "High-density city break specialist. 5–7 days, one neighbourhood per city, galleries every morning, serious dinner every night. Researches restaurant lists for weeks in advance. Leaves knowing the neighbourhood better than the highlights. Cities are the destination, not the base.",
+};
+
 type ProfileSaves = {
   userId: string;
   saves: SaveInput[];
@@ -455,18 +478,117 @@ const PROFILES: ProfileSaves[] = [
   },
 ];
 
+// ── Demo trip data (hardcoded, no AI needed) ───────────────────────────────────
+
+const DEMO_TRIP_INVITE_TOKEN = "demo-trip-public";
+
+const DEMO_GROUP_DECISIONS = [
+  {
+    question: "Week one — should we split up or stay together? Everyone has different priorities.",
+    status: "done" as const,
+    assignedTo: "demo_elena",
+    costPerPax: "€420",
+    confirmationLink: "https://airbnb.com",
+    verdictJson: {
+      type: "structure" as const,
+      verdict: "Split to your strengths. Converge in Sicily on day 10.",
+      travelPatterns: [
+        "Elena roots in food-driven neighbourhoods and needs 5+ days to find her rhythm",
+        "James optimises for physical terrain — cities are layovers",
+        "Nina extracts maximum cultural density in short windows and moves fast",
+      ],
+      coreConflict: "Elena wants slow immersion, James wants altitude, Nina wants gallery density — same week, three incompatible modes",
+      whatYoureMissing: "Forced group compromise means nobody gets what they came for. Splitting week one means you actually enjoy it.",
+      whyThisFits: "Elena anchors in Puglia — masseria near Lecce, Slow Food towns, market circuit. James and Nina fly into Athens: two days at Meteora for James, Exarchia galleries and Monastiraki for Nina. All three land in Ortigia, Syracuse on day 10.",
+      tradeoffs: "You lose the group dynamic for week one. Requires everyone to be confident with solo logistics for 9 days.",
+      avoidIf: ["First trip abroad for anyone", "One person is anxious about solo travel", "Flights don't allow split routing"],
+      nextMove: "Book the Lecce masseria now — it sells in September. Athens flights are flexible.",
+      anchors: ["Lecce area, Puglia (Elena)", "Athens + Meteora (James/Nina, split)", "Ortigia, Syracuse (group reunion)"],
+      timingConfidence: "High — September is ideal for all three legs",
+      stopDoingThis: "Planning every day as a group when travel styles are fundamentally incompatible for week one",
+      usedSaveIds: [],
+      whoGetsWhat: [
+        { userId: "demo_elena", memberName: "Elena", assignment: "7 nights near Lecce — masseria, Salento markets, Ostuni hill town day" },
+        { userId: "demo_nina", memberName: "Nina", assignment: "Athens 4 nights — Exarchia galleries, Kerameikos evening, serious dinner" },
+        { userId: "demo_james", memberName: "James", assignment: "Meteora 2 nights then Pelion coast — 8-hour ridge walk, isolated beach guesthouse" },
+      ],
+      theSeam: "All three in Ortigia market, Syracuse, Saturday morning of day 10. Market starts at 7am. Nobody is late.",
+    },
+    comments: [
+      { userId: "demo_james", displayName: "James", content: "I'm not spending a week in a city. If we're going southern Italy I need at least something with elevation or I'm doing a solo detour anyway." },
+      { userId: "demo_nina", displayName: "Nina", content: "If James is going remote I'd genuinely rather have Athens to myself. I can get through three galleries before either of you have had breakfast." },
+      { userId: "demo_elena", displayName: "Elena", content: "This is exactly why we should split. I'll coordinate the Sicily reunion. Book your own week one." },
+    ],
+  },
+  {
+    question: "Final 4 days — Sicily or Malta?",
+    status: "assigned" as const,
+    assignedTo: "demo_nina",
+    costPerPax: null,
+    confirmationLink: null,
+    verdictJson: {
+      type: "choose" as const,
+      verdict: "Sicily. Full stop.",
+      travelPatterns: [
+        "Elena's food logic requires cultural depth — Malta can't compete with Palermo's street food density",
+        "Nina needs walkable city blocks with serious architecture and at least one gallery — Ragusa Ibla delivers",
+        "James needs one physical challenge — Etna summit is the obvious answer and he knows it",
+      ],
+      coreConflict: "Malta is the easier, more predictable choice — which is exactly why it's wrong for this group",
+      whatYoureMissing: "Malta is compact and lovely but thin on food culture and has almost no contemporary art scene. You'd eat in tourist restaurants and feel restless.",
+      whyThisFits: "Sicily has enough geographic range to give everyone their mode without compromise — baroque cities, volcanic terrain, and one of the best food regions in Europe all in four days.",
+      tradeoffs: "Why not Malta: better weather guarantee, simpler logistics, less distance. But the wrong energy for how this trip has gone.",
+      avoidIf: ["Someone has mobility issues (Etna is a full-day hike)", "You have fewer than 3 days", "It's July or August (too hot)"],
+      nextMove: "Book Palermo accommodation now. Ragusa Ibla fills fast in September.",
+      anchors: ["Palermo (Elena base)", "Ragusa Ibla (Nina, 2 nights)", "Nicolosi / Etna (James detour)"],
+      timingConfidence: "High — September is the best month in Sicily. Harvest season, no crowds.",
+      stopDoingThis: "Treating Malta as a reasonable alternative. It isn't for this trip.",
+      usedSaveIds: [],
+      whoGetsWhat: [
+        { userId: "demo_elena", memberName: "Elena", assignment: "Palermo — Ballarò and Vucciria markets, day trip to Marsala wine cantinas" },
+        { userId: "demo_nina", memberName: "Nina", assignment: "Ragusa Ibla 2 nights — baroque UNESCO walk, dinner at one serious restaurant" },
+        { userId: "demo_james", memberName: "James", assignment: "Etna summit via crater rim trail — 6-hour guided ascent, overnight in Nicolosi" },
+      ],
+      theSeam: "Noto almond granita at 8am before the flight home. Everyone makes it. Nobody is still in bed.",
+    },
+    comments: [
+      { userId: "demo_nina", displayName: "Nina", content: "Malta feels like the sensible choice. Smaller, easier, everyone ends up in the same place." },
+      { userId: "demo_james", displayName: "James", content: "Nina I respect you but I'm not flying to the Mediterranean and skipping Etna. It's a volcano. I have standards." },
+      { userId: "demo_elena", displayName: "Elena", content: "Sicily. Malta is a different trip. The Ballarò market alone justifies it." },
+    ],
+  },
+  {
+    question: "That half-day in Catania when the split ends and before we move to Syracuse — what's the plan?",
+    status: "undecided" as const,
+    assignedTo: null,
+    costPerPax: null,
+    confirmationLink: null,
+    verdictJson: null,
+    comments: [
+      { userId: "demo_james", displayName: "James", content: "Are we all arriving from different cities? I'm coming down from Taormina by rental car." },
+      { userId: "demo_nina", displayName: "Nina", content: "I'm on the Athens → Catania flight, arriving 2pm. Can someone meet me or is everyone fending for themselves?" },
+      { userId: "demo_elena", displayName: "Elena", content: "Train from Lecce, arrives 11am. I want to walk the fish market before you two land. James — could you pick Nina up if you're driving?" },
+      { userId: "demo_james", displayName: "James", content: "Yes. I'll swing by the airport on the way south. Nina just send me your flight number." },
+    ],
+  },
+];
+
+// ── Main ───────────────────────────────────────────────────────────────────────
+
 async function main() {
   console.log("Seeding demo profiles...\n");
+
+  const savedSaveIdsByUser: Record<string, number[]> = {};
 
   for (const profile of PROFILES) {
     console.log(`\n── ${profile.userId} ──`);
 
-    // Clear existing data
+    // Clear existing solo data
     const existingSaves = await db.select().from(savesTable).where(eq(savesTable.userId, profile.userId));
     if (existingSaves.length > 0) {
       await db.delete(decisionsTable).where(eq(decisionsTable.userId, profile.userId));
       await db.delete(savesTable).where(eq(savesTable.userId, profile.userId));
-      console.log(`  Cleared existing data`);
+      console.log("  Cleared existing solo data");
     }
 
     // Insert saves
@@ -487,6 +609,7 @@ async function main() {
       }).returning();
       insertedSaves.push(inserted);
     }
+    savedSaveIdsByUser[profile.userId] = insertedSaves.map(s => s.id);
     console.log(`  Inserted ${insertedSaves.length} saves`);
 
     // Generate decisions
@@ -503,12 +626,118 @@ async function main() {
         });
         console.log(`  ✓ Verdict: "${resultJson.verdict}"`);
       } catch (err) {
-        console.error(`  ✗ Failed:`, err);
+        console.error("  ✗ Failed:", err);
       }
     }
+
+    // Upsert travel profile
+    await db
+      .insert(userProfilesTable)
+      .values({
+        userId: profile.userId,
+        travelProfile: TRAVEL_PROFILES[profile.userId] ?? "",
+        savesCount: profile.saves.length,
+      })
+      .onConflictDoUpdate({
+        target: userProfilesTable.userId,
+        set: {
+          travelProfile: TRAVEL_PROFILES[profile.userId] ?? "",
+          savesCount: profile.saves.length,
+          updatedAt: new Date(),
+        },
+      });
+    console.log("  ✓ Travel profile upserted");
   }
 
-  console.log("\nDone! Demo profiles seeded successfully.");
+  // ── Demo trip ──────────────────────────────────────────────────────────────
+  console.log("\n── Demo trip ──");
+
+  // Clear existing demo trip (cascade deletes members, decisions, comments)
+  const existingTrips = await db
+    .select()
+    .from(tripsTable)
+    .where(eq(tripsTable.inviteToken, DEMO_TRIP_INVITE_TOKEN));
+  for (const trip of existingTrips) {
+    await db.delete(tripsTable).where(eq(tripsTable.id, trip.id));
+    console.log(`  Cleared existing demo trip (id ${trip.id})`);
+  }
+
+  // Create trip
+  const [trip] = await db.insert(tripsTable).values({
+    name: "Mediterranean September",
+    destination: "Southern Italy + Sicily",
+    startDate: "2025-09-01",
+    endDate: "2025-09-14",
+    coordinatorId: "demo_elena",
+    inviteToken: DEMO_TRIP_INVITE_TOKEN,
+  }).returning();
+  console.log(`  Created trip id ${trip.id}`);
+
+  // Add members
+  await db.insert(tripMembersTable).values([
+    { tripId: trip.id, userId: "demo_elena", role: "coordinator", displayName: "Elena Vasquez" },
+    { tripId: trip.id, userId: "demo_james", role: "member", displayName: "James Okoro" },
+    { tripId: trip.id, userId: "demo_nina", role: "member", displayName: "Nina Chen" },
+  ]);
+  console.log("  Added 3 members");
+
+  // Create group decisions
+  for (const dec of DEMO_GROUP_DECISIONS) {
+    const [inserted] = await db.insert(groupDecisionsTable).values({
+      tripId: trip.id,
+      question: dec.question,
+      status: dec.status,
+      verdictJson: dec.verdictJson
+        ? groupVerdictJsonSchema.parse(dec.verdictJson)
+        : null,
+      assignedTo: dec.assignedTo,
+      costPerPax: dec.costPerPax,
+      confirmationLink: dec.confirmationLink,
+      createdBy: "demo_elena",
+    }).returning();
+
+    // Add comments
+    for (const comment of dec.comments) {
+      await db.insert(decisionCommentsTable).values({
+        decisionId: inserted.id,
+        userId: comment.userId,
+        displayName: comment.displayName,
+        content: comment.content,
+      });
+    }
+    console.log(`  ✓ Decision "${dec.question.slice(0, 50)}…" (${dec.status})`);
+  }
+
+  // ── Friend sharing: Elena ↔ Nina ─────────────────────────────────────────
+  console.log("\n── Friend sharing ──");
+
+  // Clear existing demo friend shares
+  await db
+    .delete(saveShareRequestsTable)
+    .where(eq(saveShareRequestsTable.fromUserId, "demo_elena"));
+  await db
+    .delete(saveShareRequestsTable)
+    .where(eq(saveShareRequestsTable.fromUserId, "demo_nina"));
+
+  // Elena → Nina (accepted)
+  await db.insert(saveShareRequestsTable).values({
+    fromUserId: "demo_elena",
+    toEmail: "nina@demo.whereto.app",
+    toUserId: "demo_nina",
+    status: "accepted",
+  });
+
+  // Nina → Elena (accepted, bilateral)
+  await db.insert(saveShareRequestsTable).values({
+    fromUserId: "demo_nina",
+    toEmail: "elena@demo.whereto.app",
+    toUserId: "demo_elena",
+    status: "accepted",
+  });
+
+  console.log("  ✓ Elena ↔ Nina friend share (accepted)");
+
+  console.log("\nDone! Demo data seeded successfully.");
   process.exit(0);
 }
 
