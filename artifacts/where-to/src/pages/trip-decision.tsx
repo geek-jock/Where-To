@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import { VerdictDisplay } from "@/components/verdict-display";
+import { GroupVerdictDownloadButton } from "@/components/share-cards";
 
 function getInitials(name: string | null | undefined): string {
   if (!name) return "?";
@@ -363,6 +364,10 @@ function GroupVerdictSection({ verdictJson, members, question }: { verdictJson: 
           </blockquote>
         </div>
       )}
+
+      <div className="flex justify-center pt-4 border-t border-border">
+        <GroupVerdictDownloadButton question={question} verdictJson={verdictJson} />
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import type { VerdictJson } from "@workspace/api-client-react";
+import { TravelPatternsDownloadButton } from "./share-cards";
 
 function BulletList({ items }: { items: string[] }) {
   return (
@@ -160,20 +161,19 @@ export function VerdictDisplay({ question, verdictJson, createdAt, backHref, onN
       )}
 
       {/* Footer actions */}
-      {(backHref || onNewDecision) && (
-        <div className="flex flex-wrap justify-center gap-3 pt-4">
-          {backHref && (
-            <Button variant="outline" asChild>
-              <Link href="/history">View all decisions</Link>
-            </Button>
-          )}
-          {onNewDecision && (
-            <Button variant="outline" onClick={onNewDecision}>
-              Ask something else
-            </Button>
-          )}
-        </div>
-      )}
+      <div className="flex flex-wrap justify-center gap-3 pt-4">
+        <TravelPatternsDownloadButton verdictJson={verdictJson} />
+        {backHref && (
+          <Button variant="outline" asChild>
+            <Link href="/history">View all decisions</Link>
+          </Button>
+        )}
+        {onNewDecision && (
+          <Button variant="outline" onClick={onNewDecision}>
+            Ask something else
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
