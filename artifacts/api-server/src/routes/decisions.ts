@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
-import { db, decisionsTable, savesTable } from "@workspace/db";
+import { db, decisionsTable, savesTable, userProfilesTable } from "@workspace/db";
 import { verdictJsonSchema } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
@@ -105,6 +105,106 @@ Return ONLY a JSON object: { "type": "choose" } or { "type": "structure" }. No o
   return "choose";
 }
 
+const TRAVEL_STOP_WORDS = new Set([
+  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of",
+  "with", "is", "it", "i", "my", "me", "we", "do", "be", "am", "are", "was",
+  "have", "has", "this", "that", "so", "not", "no", "yes", "go", "get", "want",
+  "need", "like", "just", "really", "very", "some", "any", "all", "more", "one",
+  "two", "three", "week", "weeks", "day", "days", "month", "months", "year",
+  "good", "great", "best", "bad", "nice", "can", "could", "would", "should",
+  "its", "our", "their", "there", "here", "where", "what", "how", "why", "when",
+  "than", "from", "been", "will", "well", "also", "even", "about", "up", "out",
+  "if", "as", "had", "he", "she", "they", "you", "your",
+]);
+
+const TRAVEL_TERM_EXPANSIONS: Record<string, string[]> = {
+  safari: ["safari", "wildlife", "nature", "adventure", "africa"],
+  beach: ["beach", "coastal", "island", "ocean", "sea", "surf"],
+  mountain: ["mountain", "hiking", "trekking", "alpine", "altitude"],
+  food: ["foodie", "restaurant", "café", "cafe", "cuisine", "gastronomy"],
+  culture: ["cultural", "history", "museum", "architecture", "art"],
+  city: ["city", "urban", "metropolitan", "downtown"],
+  nature: ["nature", "park", "reserve", "wilderness", "forest", "jungle"],
+  luxury: ["luxury", "resort", "hotel", "spa", "wellness"],
+  budget: ["budget", "hostel", "backpacker", "cheap"],
+  adventure: ["adventure", "hiking", "trekking", "outdoor", "extreme"],
+  romantic: ["romantic", "couples", "honeymoon", "intimate"],
+  solo: ["solo", "solo-friendly", "backpacker", "independent"],
+  island: ["island", "coastal", "tropical", "beach"],
+  desert: ["desert", "arid", "dunes"],
+  jungle: ["jungle", "rainforest", "tropical", "nature"],
+  nightlife: ["nightlife", "bar", "club", "party"],
+  wellness: ["wellness", "spa", "retreat", "yoga", "meditation"],
+  history: ["history", "historical", "ancient", "cultural", "heritage"],
+  vibe: ["vibe", "atmosphere", "feel", "mood"],
+  off: ["off-beat", "underrated", "hidden", "undiscovered"],
+};
+
+function extractKeywords(text: string): string[] {
+  const lower = text.toLowerCase();
+  const words = lower.split(/[\s,.\-!?;:()"']+/).filter(w => w.length > 2 && !TRAVEL_STOP_WORDS.has(w));
+
+  const expanded = new Set<string>(words);
+  for (const word of words) {
+    const expansions = TRAVEL_TERM_EXPANSIONS[word];
+    if (expansions) {
+      for (const e of expansions) expanded.add(e);
+    }
+    for (const [key, vals] of Object.entries(TRAVEL_TERM_EXPANSIONS)) {
+      if (vals.some(v => word.includes(v) || v.includes(word))) {
+        expanded.add(key);
+        for (const v of vals) expanded.add(v);
+      }
+    }
+  }
+
+  return Array.from(expanded);
+}
+
+type SaveRow = typeof savesTable.$inferSelect;
+
+function parseTags(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try { return JSON.parse(raw) as string[]; } catch { return []; }
+}
+
+function scoreSave(save: SaveRow, keywords: string[]): number {
+  if (keywords.length === 0) return 0;
+  let score = 0;
+  const tags = parseTags(save.tags).map(t => t.toLowerCase());
+  const category = (save.category ?? "").toLowerCase();
+  const placeName = (save.placeName ?? "").toLowerCase();
+  const title = (save.scrapedTitle ?? "").toLowerCase();
+  const note = (save.note ?? "").toLowerCase();
+  const description = (save.description ?? "").toLowerCase();
+
+  for (const kw of keywords) {
+    if (tags.some(t => t.includes(kw) || kw.includes(t))) score += 3;
+    if (category && category.includes(kw)) score += 2;
+    if (placeName.includes(kw)) score += 2;
+    if (title.includes(kw)) score += 1;
+    if (note.includes(kw)) score += 1;
+    if (description.includes(kw)) score += 1;
+  }
+
+  return score;
+}
+
+function matchSavesToQuestion(saves: SaveRow[], question: string, limit = 15): SaveRow[] {
+  if (saves.length === 0) return [];
+  const keywords = extractKeywords(question);
+
+  const scored = saves.map(s => ({ save: s, score: scoreSave(s, keywords) }));
+  scored.sort((a, b) => b.score - a.score);
+
+  const positive = scored.filter(x => x.score > 0);
+  const selected = positive.length >= 3
+    ? positive.slice(0, limit)
+    : scored.slice(0, Math.min(limit, saves.length));
+
+  return selected.map(x => x.save);
+}
+
 router.get("/", requireAuth, async (req: any, res) => {
   try {
     const decisions = await db
@@ -136,25 +236,35 @@ router.get("/:id", requireAuth, async (req: any, res) => {
 
 router.post("/", requireAuth, async (req: any, res) => {
   try {
-    const { question, saveIds } = req.body;
+    const { question } = req.body;
     if (!question) return res.status(400).json({ error: "question is required" });
-    if (!saveIds || !Array.isArray(saveIds) || saveIds.length === 0) {
-      return res.status(400).json({ error: "saveIds is required and must be non-empty" });
-    }
 
-    const saves = await db
+    const allSaves = await db
       .select()
       .from(savesTable)
-      .where(and(
-        inArray(savesTable.id, saveIds),
-        eq(savesTable.userId, req.userId)
-      ));
+      .where(eq(savesTable.userId, req.userId));
 
-    const savesSnapshot = saves.map(s => {
+    if (allSaves.length === 0) {
+      return res.status(400).json({ error: "You need at least one save before getting a verdict." });
+    }
+
+    const matchedSaves = matchSavesToQuestion(allSaves, question);
+    req.log.info({ totalSaves: allSaves.length, matchedCount: matchedSaves.length }, "Matched saves for decision");
+
+    const [profile] = await db
+      .select()
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.userId, req.userId));
+
+    const savesSnapshot = matchedSaves.map(s => {
       const parts = [`ID:${s.id}`];
       if (s.note) parts.push(s.note);
       if (s.scrapedTitle) parts.push(`Title: ${s.scrapedTitle}`);
       if (s.description) parts.push(`Description: ${s.description}`);
+      if (s.placeName) parts.push(`Place: ${s.placeName}`);
+      const tags = parseTags(s.tags);
+      if (tags.length > 0) parts.push(`Tags: ${tags.join(", ")}`);
+      if (s.category) parts.push(`Category: ${s.category}`);
       if (s.url) parts.push(`URL: ${s.url}`);
       return parts.join("\n");
     }).join("\n\n---\n\n");
@@ -163,7 +273,12 @@ router.post("/", requireAuth, async (req: any, res) => {
     req.log.info({ questionType }, "Classified question type");
 
     const systemPrompt = questionType === "structure" ? STRUCTURE_SYSTEM_PROMPT : CHOOSE_SYSTEM_PROMPT;
-    const userPrompt = `User travel saves:\n${savesSnapshot}\n\nUser question:\n${question}`;
+
+    const travelProfileSection = profile?.travelProfile
+      ? `User travel profile (summary of their overall travel style):\n${profile.travelProfile}\n\n`
+      : "";
+
+    const userPrompt = `${travelProfileSection}User's relevant saves (${matchedSaves.length} of ${allSaves.length} total):\n${savesSnapshot}\n\nUser question:\n${question}`;
 
     const callModel = async () => openai.chat.completions.create({
       model: "gpt-5.4",
@@ -208,70 +323,6 @@ router.post("/", requireAuth, async (req: any, res) => {
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Failed to create decision" });
-  }
-});
-
-router.post("/select-saves", requireAuth, async (req: any, res): Promise<void> => {
-  try {
-    const { question } = req.body;
-    if (!question || typeof question !== "string") {
-      res.status(400).json({ error: "question is required" });
-      return;
-    }
-
-    const saves = await db
-      .select()
-      .from(savesTable)
-      .where(eq(savesTable.userId, req.userId));
-
-    if (saves.length === 0) {
-      res.json({ saveIds: [] });
-      return;
-    }
-
-    const saveSummaries = saves.map(s => {
-      const label = s.scrapedTitle || s.placeName || (s.note?.slice(0, 80) ?? "");
-      const tags = (Array.isArray(s.tags) ? s.tags : []).join(", ");
-      const place = s.placeName ?? "";
-      return `ID:${s.id} | ${label}${place ? ` | ${place}` : ""}${tags ? ` | tags: ${tags}` : ""}`;
-    }).join("\n");
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-5.4-mini",
-      max_completion_tokens: 256,
-      messages: [
-        {
-          role: "system",
-          content: `You are a travel assistant. Given a user's question and their saved travel items, select the most relevant save IDs (up to 10). Return ONLY a JSON object with a "saveIds" array of integers. No explanation.`,
-        },
-        {
-          role: "user",
-          content: `Question: ${question}\n\nSaved items:\n${saveSummaries}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    });
-
-    const content = response.choices[0]?.message?.content ?? "{}";
-    let selectedIds: number[] = [];
-    try {
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed.saveIds)) {
-        selectedIds = parsed.saveIds
-          .filter((id: unknown) => typeof id === "number" && Number.isInteger(id))
-          .slice(0, 10);
-      }
-    } catch {
-      selectedIds = [];
-    }
-
-    const validIds = new Set(saves.map(s => s.id));
-    selectedIds = selectedIds.filter(id => validIds.has(id));
-
-    res.json({ saveIds: selectedIds });
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Failed to select saves" });
   }
 });
 

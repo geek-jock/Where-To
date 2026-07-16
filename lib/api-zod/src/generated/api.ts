@@ -190,18 +190,6 @@ export const ListDecisionsResponse = zod.array(ListDecisionsResponseItem);
  */
 export const CreateDecisionBody = zod.object({
   question: zod.string(),
-  saveIds: zod.array(zod.number()),
-});
-
-/**
- * @summary AI-selects the most relevant saves for a given question
- */
-export const SelectSavesForDecisionBody = zod.object({
-  question: zod.string(),
-});
-
-export const SelectSavesForDecisionResponse = zod.object({
-  saveIds: zod.array(zod.number()),
 });
 
 /**

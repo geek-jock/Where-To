@@ -102,9 +102,10 @@ interface DecisionResultProps {
   createdAt?: string;
   backHref?: string;
   onNewDecision?: () => void;
+  savesMap?: Record<number, string>;
 }
 
-export function DecisionResult({ question, result, resultJson, createdAt, backHref, onNewDecision }: DecisionResultProps) {
+export function DecisionResult({ question, result, resultJson, createdAt, backHref, onNewDecision, savesMap }: DecisionResultProps) {
   if (resultJson) {
     return (
       <VerdictDisplay
@@ -113,6 +114,7 @@ export function DecisionResult({ question, result, resultJson, createdAt, backHr
         createdAt={createdAt}
         backHref={backHref}
         onNewDecision={onNewDecision}
+        savesMap={savesMap}
       />
     );
   }

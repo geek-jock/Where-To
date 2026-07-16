@@ -31,9 +31,12 @@ interface VerdictDisplayProps {
   createdAt?: string;
   backHref?: string;
   onNewDecision?: () => void;
+  savesMap?: Record<number, string>;
 }
 
-export function VerdictDisplay({ question, verdictJson, createdAt, backHref, onNewDecision }: VerdictDisplayProps) {
+export function VerdictDisplay({ question, verdictJson, createdAt, backHref, onNewDecision, savesMap }: VerdictDisplayProps) {
+  const saveCount = verdictJson.usedSaveIds.length;
+
   return (
     <div className="space-y-12 max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-500 pb-28">
 
@@ -142,10 +145,17 @@ export function VerdictDisplay({ question, verdictJson, createdAt, backHref, onN
       </div>
 
       {/* Based on your saves footer */}
-      <p className="text-xs text-muted-foreground text-center">
-        Based on your saves:{" "}
-        {verdictJson.usedSaveIds.length > 0 ? verdictJson.usedSaveIds.join(", ") : "all selected saves"}
-      </p>
+      {saveCount > 0 && (
+        <div className="text-xs text-muted-foreground text-center space-y-1">
+          <p>Based on {saveCount === 1 ? "1 of your saves" : `${saveCount} of your saves`}</p>
+          <p className="text-muted-foreground/60 leading-relaxed">
+            {verdictJson.usedSaveIds.map(id => {
+              const label = savesMap?.[id];
+              return label ?? `#${id}`;
+            }).join(" · ")}
+          </p>
+        </div>
+      )}
 
       {/* Footer actions */}
       {(backHref || onNewDecision) && (

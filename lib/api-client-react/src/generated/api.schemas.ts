@@ -87,15 +87,6 @@ export interface Decision {
 
 export interface CreateDecisionBody {
   question: string;
-  saveIds: number[];
-}
-
-export interface SaveSelectionInput {
-  question: string;
-}
-
-export interface SaveSelection {
-  saveIds: number[];
 }
 
 export interface DeleteResult {

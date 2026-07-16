@@ -8,5 +8,4 @@
 
 export interface CreateDecisionBody {
   question: string;
-  saveIds: number[];
 }

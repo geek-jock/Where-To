@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
-import { db, savesTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, savesTable, userProfilesTable } from "@workspace/db";
+import { eq, and, count } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
@@ -42,6 +42,62 @@ function buildOfficialLink(category: string | null, placeName: string | null): s
   return `https://www.google.com/maps/search/${q}`;
 }
 
+async function maybeRegenerateTravelProfile(userId: string, savesCount: number, log: any): Promise<void> {
+  if (savesCount < 10 || savesCount % 10 !== 0) return;
+
+  try {
+    const allSaves = await db
+      .select()
+      .from(savesTable)
+      .where(eq(savesTable.userId, userId));
+
+    const savesSummary = allSaves.map(s => {
+      const parts: string[] = [];
+      if (s.scrapedTitle) parts.push(s.scrapedTitle);
+      if (s.placeName) parts.push(s.placeName);
+      if (s.category) parts.push(`(${s.category})`);
+      const tags = parseTags(s.tags) ?? [];
+      if (tags.length > 0) parts.push(`[${tags.join(", ")}]`);
+      if (s.note) parts.push(`— ${s.note.slice(0, 80)}`);
+      return parts.join(" ");
+    }).filter(Boolean).join("\n");
+
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-5.4-mini",
+      max_completion_tokens: 200,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a travel profile builder. Given a user's saved travel places, write a concise ~150-token summary of their travel identity: " +
+            "what draws them (vibe, categories, geography), patterns in their saves, their apparent travel style, and any recurring themes. " +
+            "This will be prepended to AI travel decision prompts to give context without sending the full save library. " +
+            "Write in second person (\"You gravitate toward...\"). Be specific and editorial. No emojis. No generic phrases.",
+        },
+        {
+          role: "user",
+          content: `My saved travel places (${allSaves.length} total):\n${savesSummary}`,
+        },
+      ],
+    });
+
+    const travelProfile = aiResponse.choices[0]?.message?.content?.trim() ?? null;
+    if (!travelProfile) return;
+
+    await db
+      .insert(userProfilesTable)
+      .values({ userId, travelProfile, savesCount })
+      .onConflictDoUpdate({
+        target: userProfilesTable.userId,
+        set: { travelProfile, savesCount, updatedAt: new Date() },
+      });
+
+    log.info({ savesCount }, "Travel profile regenerated");
+  } catch (err) {
+    log.error(err, "Failed to regenerate travel profile — non-fatal");
+  }
+}
+
 router.get("/", requireAuth, async (req: any, res) => {
   try {
     const saves = await db
@@ -66,6 +122,14 @@ router.post("/", requireAuth, async (req: any, res) => {
       scrapedTitle: scrapedTitle ?? null,
       description: description ?? null,
     }).returning();
+
+    const [{ value: newCount }] = await db
+      .select({ value: count() })
+      .from(savesTable)
+      .where(eq(savesTable.userId, req.userId));
+
+    maybeRegenerateTravelProfile(req.userId, newCount, req.log).catch(() => {});
+
     return res.status(201).json(withTags(save));
   } catch (err) {
     req.log.error(err);

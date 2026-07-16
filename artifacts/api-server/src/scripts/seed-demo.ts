@@ -116,8 +116,8 @@ async function generateDecision(question: string, saves: typeof savesTable.$infe
   const userPrompt = `User travel saves:\n${savesSnapshot}\n\nUser question:\n${question}`;
 
   const callModel = async () => openai.chat.completions.create({
-    model: "gpt-5",
-    max_completion_tokens: 4096,
+    model: "gpt-5.4",
+    max_completion_tokens: 8192,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -125,17 +125,26 @@ async function generateDecision(question: string, saves: typeof savesTable.$infe
     response_format: { type: "json_object" },
   });
 
+  const tryParse = (raw: string) => {
+    try {
+      const parsed = JSON.parse(raw);
+      return verdictJsonSchema.safeParse(parsed);
+    } catch {
+      return { success: false as const, error: new Error("JSON parse failed") };
+    }
+  };
+
   let rawContent = (await callModel()).choices[0]?.message?.content ?? "";
-  let validated = verdictJsonSchema.safeParse(JSON.parse(rawContent));
+  let validated = tryParse(rawContent);
 
   if (!validated.success) {
     console.warn("  Retrying (validation failed first attempt)...");
     rawContent = (await callModel()).choices[0]?.message?.content ?? "";
-    validated = verdictJsonSchema.safeParse(JSON.parse(rawContent));
+    validated = tryParse(rawContent);
   }
 
   if (!validated.success) {
-    throw new Error(`Verdict validation failed: ${JSON.stringify(validated.error.issues)}`);
+    throw new Error(`Verdict validation failed after retry`);
   }
 
   return { rawContent, resultJson: validated.data, savesSnapshot };
