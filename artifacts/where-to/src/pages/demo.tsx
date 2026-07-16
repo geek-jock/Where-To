@@ -120,7 +120,7 @@ export default function Demo() {
               </span>
               <span className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5" />
-                {data.demoTrips.length} group trips
+                {data?.demoTrips?.length ?? 0} group trips
               </span>
             </div>
           )}
@@ -152,7 +152,7 @@ export default function Demo() {
         </div>
 
         {/* Group trips */}
-        {data?.seeded && data.demoTrips.length > 0 && (
+        {data?.seeded && (data?.demoTrips?.length ?? 0) > 0 && (
           <div className="space-y-6">
             <div className="space-y-1">
               <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Group trips</p>
@@ -160,7 +160,7 @@ export default function Demo() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">
-              {data.demoTrips.map(trip => (
+              {data?.demoTrips?.map(trip => (
                 <TripCard key={trip.id} trip={trip} />
               ))}
             </div>
