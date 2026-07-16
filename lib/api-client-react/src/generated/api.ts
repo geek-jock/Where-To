@@ -17,14 +17,22 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AssignDecisionBody,
+  CreateCommentBody,
   CreateDecisionBody,
+  CreateGroupDecisionBody,
   CreateSaveBody,
   CreateTripBody,
   Decision,
+  DecisionComment,
   DeleteResult,
+  GetGroupDecisionParams,
   GetTripParams,
+  GroupDecision,
+  GroupDecisionDetail,
   HealthStatus,
   JoinTripBody,
+  ListGroupDecisionsParams,
   Save,
   ScrapeResult,
   ScrapeUrlBody,
@@ -1186,6 +1194,681 @@ export function useGetTrip<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List decision rooms for a trip
+ */
+export const getListGroupDecisionsUrl = (
+  id: number,
+  params?: ListGroupDecisionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/trips/${id}/decisions?${stringifiedParams}`
+    : `/api/trips/${id}/decisions`;
+};
+
+export const listGroupDecisions = async (
+  id: number,
+  params?: ListGroupDecisionsParams,
+  options?: RequestInit,
+): Promise<GroupDecision[]> => {
+  return customFetch<GroupDecision[]>(getListGroupDecisionsUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGroupDecisionsQueryKey = (
+  id: number,
+  params?: ListGroupDecisionsParams,
+) => {
+  return [`/api/trips/${id}/decisions`, ...(params ? [params] : [])] as const;
+};
+
+export const getListGroupDecisionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGroupDecisions>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: ListGroupDecisionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGroupDecisions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListGroupDecisionsQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listGroupDecisions>>
+  > = ({ signal }) =>
+    listGroupDecisions(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGroupDecisions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGroupDecisionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGroupDecisions>>
+>;
+export type ListGroupDecisionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List decision rooms for a trip
+ */
+
+export function useListGroupDecisions<
+  TData = Awaited<ReturnType<typeof listGroupDecisions>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: ListGroupDecisionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGroupDecisions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGroupDecisionsQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a decision room (coordinator only)
+ */
+export const getCreateGroupDecisionUrl = (id: number) => {
+  return `/api/trips/${id}/decisions`;
+};
+
+export const createGroupDecision = async (
+  id: number,
+  createGroupDecisionBody: CreateGroupDecisionBody,
+  options?: RequestInit,
+): Promise<GroupDecision> => {
+  return customFetch<GroupDecision>(getCreateGroupDecisionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createGroupDecisionBody),
+  });
+};
+
+export const getCreateGroupDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGroupDecision>>,
+    TError,
+    { id: number; data: BodyType<CreateGroupDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGroupDecision>>,
+  TError,
+  { id: number; data: BodyType<CreateGroupDecisionBody> },
+  TContext
+> => {
+  const mutationKey = ["createGroupDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGroupDecision>>,
+    { id: number; data: BodyType<CreateGroupDecisionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createGroupDecision(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateGroupDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGroupDecision>>
+>;
+export type CreateGroupDecisionMutationBody = BodyType<CreateGroupDecisionBody>;
+export type CreateGroupDecisionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a decision room (coordinator only)
+ */
+export const useCreateGroupDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGroupDecision>>,
+    TError,
+    { id: number; data: BodyType<CreateGroupDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createGroupDecision>>,
+  TError,
+  { id: number; data: BodyType<CreateGroupDecisionBody> },
+  TContext
+> => {
+  return useMutation(getCreateGroupDecisionMutationOptions(options));
+};
+
+/**
+ * @summary Get a decision room with comments and members
+ */
+export const getGetGroupDecisionUrl = (
+  id: number,
+  decId: number,
+  params?: GetGroupDecisionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/trips/${id}/decisions/${decId}?${stringifiedParams}`
+    : `/api/trips/${id}/decisions/${decId}`;
+};
+
+export const getGroupDecision = async (
+  id: number,
+  decId: number,
+  params?: GetGroupDecisionParams,
+  options?: RequestInit,
+): Promise<GroupDecisionDetail> => {
+  return customFetch<GroupDecisionDetail>(
+    getGetGroupDecisionUrl(id, decId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetGroupDecisionQueryKey = (
+  id: number,
+  decId: number,
+  params?: GetGroupDecisionParams,
+) => {
+  return [
+    `/api/trips/${id}/decisions/${decId}`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetGroupDecisionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGroupDecision>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  decId: number,
+  params?: GetGroupDecisionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGroupDecision>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetGroupDecisionQueryKey(id, decId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGroupDecision>>
+  > = ({ signal }) =>
+    getGroupDecision(id, decId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(id && decId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGroupDecision>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGroupDecisionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGroupDecision>>
+>;
+export type GetGroupDecisionQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a decision room with comments and members
+ */
+
+export function useGetGroupDecision<
+  TData = Awaited<ReturnType<typeof getGroupDecision>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  decId: number,
+  params?: GetGroupDecisionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGroupDecision>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGroupDecisionQueryOptions(
+    id,
+    decId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Post a comment in a decision room
+ */
+export const getCreateDecisionCommentUrl = (id: number, decId: number) => {
+  return `/api/trips/${id}/decisions/${decId}/comments`;
+};
+
+export const createDecisionComment = async (
+  id: number,
+  decId: number,
+  createCommentBody: CreateCommentBody,
+  options?: RequestInit,
+): Promise<DecisionComment> => {
+  return customFetch<DecisionComment>(getCreateDecisionCommentUrl(id, decId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCommentBody),
+  });
+};
+
+export const getCreateDecisionCommentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDecisionComment>>,
+    TError,
+    { id: number; decId: number; data: BodyType<CreateCommentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDecisionComment>>,
+  TError,
+  { id: number; decId: number; data: BodyType<CreateCommentBody> },
+  TContext
+> => {
+  const mutationKey = ["createDecisionComment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDecisionComment>>,
+    { id: number; decId: number; data: BodyType<CreateCommentBody> }
+  > = (props) => {
+    const { id, decId, data } = props ?? {};
+
+    return createDecisionComment(id, decId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDecisionCommentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDecisionComment>>
+>;
+export type CreateDecisionCommentMutationBody = BodyType<CreateCommentBody>;
+export type CreateDecisionCommentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Post a comment in a decision room
+ */
+export const useCreateDecisionComment = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDecisionComment>>,
+    TError,
+    { id: number; decId: number; data: BodyType<CreateCommentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDecisionComment>>,
+  TError,
+  { id: number; decId: number; data: BodyType<CreateCommentBody> },
+  TContext
+> => {
+  return useMutation(getCreateDecisionCommentMutationOptions(options));
+};
+
+/**
+ * @summary Run AI group verdict (coordinator only)
+ */
+export const getRunGroupVerdictUrl = (id: number, decId: number) => {
+  return `/api/trips/${id}/decisions/${decId}/run-verdict`;
+};
+
+export const runGroupVerdict = async (
+  id: number,
+  decId: number,
+  options?: RequestInit,
+): Promise<GroupDecisionDetail> => {
+  return customFetch<GroupDecisionDetail>(getRunGroupVerdictUrl(id, decId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRunGroupVerdictMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof runGroupVerdict>>,
+    TError,
+    { id: number; decId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof runGroupVerdict>>,
+  TError,
+  { id: number; decId: number },
+  TContext
+> => {
+  const mutationKey = ["runGroupVerdict"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof runGroupVerdict>>,
+    { id: number; decId: number }
+  > = (props) => {
+    const { id, decId } = props ?? {};
+
+    return runGroupVerdict(id, decId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RunGroupVerdictMutationResult = NonNullable<
+  Awaited<ReturnType<typeof runGroupVerdict>>
+>;
+
+export type RunGroupVerdictMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Run AI group verdict (coordinator only)
+ */
+export const useRunGroupVerdict = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof runGroupVerdict>>,
+    TError,
+    { id: number; decId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof runGroupVerdict>>,
+  TError,
+  { id: number; decId: number },
+  TContext
+> => {
+  return useMutation(getRunGroupVerdictMutationOptions(options));
+};
+
+/**
+ * @summary Assign a decision to a member (coordinator only)
+ */
+export const getAssignGroupDecisionUrl = (id: number, decId: number) => {
+  return `/api/trips/${id}/decisions/${decId}/assign`;
+};
+
+export const assignGroupDecision = async (
+  id: number,
+  decId: number,
+  assignDecisionBody: AssignDecisionBody,
+  options?: RequestInit,
+): Promise<GroupDecisionDetail> => {
+  return customFetch<GroupDecisionDetail>(
+    getAssignGroupDecisionUrl(id, decId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(assignDecisionBody),
+    },
+  );
+};
+
+export const getAssignGroupDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignGroupDecision>>,
+    TError,
+    { id: number; decId: number; data: BodyType<AssignDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assignGroupDecision>>,
+  TError,
+  { id: number; decId: number; data: BodyType<AssignDecisionBody> },
+  TContext
+> => {
+  const mutationKey = ["assignGroupDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assignGroupDecision>>,
+    { id: number; decId: number; data: BodyType<AssignDecisionBody> }
+  > = (props) => {
+    const { id, decId, data } = props ?? {};
+
+    return assignGroupDecision(id, decId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssignGroupDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assignGroupDecision>>
+>;
+export type AssignGroupDecisionMutationBody = BodyType<AssignDecisionBody>;
+export type AssignGroupDecisionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Assign a decision to a member (coordinator only)
+ */
+export const useAssignGroupDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignGroupDecision>>,
+    TError,
+    { id: number; decId: number; data: BodyType<AssignDecisionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof assignGroupDecision>>,
+  TError,
+  { id: number; decId: number; data: BodyType<AssignDecisionBody> },
+  TContext
+> => {
+  return useMutation(getAssignGroupDecisionMutationOptions(options));
+};
+
+/**
+ * @summary Confirm a decision as booked
+ */
+export const getConfirmGroupDecisionUrl = (id: number, decId: number) => {
+  return `/api/trips/${id}/decisions/${decId}/confirm`;
+};
+
+export const confirmGroupDecision = async (
+  id: number,
+  decId: number,
+  options?: RequestInit,
+): Promise<GroupDecisionDetail> => {
+  return customFetch<GroupDecisionDetail>(
+    getConfirmGroupDecisionUrl(id, decId),
+    {
+      ...options,
+      method: "PATCH",
+    },
+  );
+};
+
+export const getConfirmGroupDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmGroupDecision>>,
+    TError,
+    { id: number; decId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmGroupDecision>>,
+  TError,
+  { id: number; decId: number },
+  TContext
+> => {
+  const mutationKey = ["confirmGroupDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmGroupDecision>>,
+    { id: number; decId: number }
+  > = (props) => {
+    const { id, decId } = props ?? {};
+
+    return confirmGroupDecision(id, decId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmGroupDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmGroupDecision>>
+>;
+
+export type ConfirmGroupDecisionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Confirm a decision as booked
+ */
+export const useConfirmGroupDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmGroupDecision>>,
+    TError,
+    { id: number; decId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmGroupDecision>>,
+  TError,
+  { id: number; decId: number },
+  TContext
+> => {
+  return useMutation(getConfirmGroupDecisionMutationOptions(options));
+};
 
 /**
  * @summary Join a trip via invite token

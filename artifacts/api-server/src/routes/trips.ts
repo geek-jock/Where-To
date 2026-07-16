@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
-import { db, tripsTable, tripMembersTable } from "@workspace/db";
+import { db, tripsTable, tripMembersTable, groupDecisionsTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import crypto from "crypto";
+import tripDecisionsRouter from "./trip-decisions";
 
 const router = Router();
 
@@ -108,8 +109,11 @@ router.get("/:id", async (req: any, res) => {
       ? latestJoin.toISOString()
       : new Date(trip.createdAt).toISOString();
 
-    // openDecisionCount will be 0 until decision rooms are built
-    const openDecisionCount = 0;
+    const openDecisions = await db
+      .select({ id: groupDecisionsTable.id })
+      .from(groupDecisionsTable)
+      .where(and(eq(groupDecisionsTable.tripId, id), eq(groupDecisionsTable.status, "undecided")));
+    const openDecisionCount = openDecisions.length;
 
     return res.json({
       ...trip,
@@ -165,5 +169,7 @@ router.post("/:id/join", requireAuth, async (req: any, res) => {
     return res.status(500).json({ error: "Failed to join trip" });
   }
 });
+
+router.use("/:id/decisions", tripDecisionsRouter);
 
 export default router;

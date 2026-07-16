@@ -48,24 +48,26 @@ export function VerdictDisplay({ question, verdictJson, createdAt, backHref, onN
       )}
 
       {/* Question */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">The Question</p>
-        <blockquote className="text-xl font-serif italic text-foreground border-l-2 border-primary pl-5 leading-snug">
-          {question}
-        </blockquote>
-        <div className="pl-5 flex items-center gap-3">
-          {verdictJson.type && (
-            <span className="inline-block text-[10px] font-medium tracking-wider uppercase text-muted-foreground/70 border border-border rounded-full px-2.5 py-0.5">
-              {verdictJson.type === "structure" ? "Building a trip" : "Choosing between options"}
-            </span>
-          )}
-          {createdAt && (
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(createdAt), "MMMM d, yyyy")}
-            </p>
-          )}
+      {question && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">The Question</p>
+          <blockquote className="text-xl font-serif italic text-foreground border-l-2 border-primary pl-5 leading-snug">
+            {question}
+          </blockquote>
+          <div className="pl-5 flex items-center gap-3">
+            {verdictJson.type && (
+              <span className="inline-block text-[10px] font-medium tracking-wider uppercase text-muted-foreground/70 border border-border rounded-full px-2.5 py-0.5">
+                {verdictJson.type === "structure" ? "Building a trip" : "Choosing between options"}
+              </span>
+            )}
+            {createdAt && (
+              <p className="text-xs text-muted-foreground">
+                {format(new Date(createdAt), "MMMM d, yyyy")}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Verdict — dominant headline */}
       <div className="py-8 border-t border-b border-border space-y-3">

@@ -299,6 +299,202 @@ paths:
               schema:
                 $ref: "#/components/schemas/TripDetail"
 
+  /trips/{id}/decisions:
+    get:
+      operationId: listGroupDecisions
+      tags: [trips]
+      summary: List decision rooms for a trip
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: invite
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of group decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupDecision"
+    post:
+      operationId: createGroupDecision
+      tags: [trips]
+      summary: Create a decision room (coordinator only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupDecisionBody"
+      responses:
+        "201":
+          description: Decision created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDecision"
+
+  /trips/{id}/decisions/{decId}:
+    get:
+      operationId: getGroupDecision
+      tags: [trips]
+      summary: Get a decision room with comments and members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: decId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: invite
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Decision room detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDecisionDetail"
+
+  /trips/{id}/decisions/{decId}/comments:
+    post:
+      operationId: createDecisionComment
+      tags: [trips]
+      summary: Post a comment in a decision room
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: decId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentBody"
+      responses:
+        "201":
+          description: Comment posted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionComment"
+
+  /trips/{id}/decisions/{decId}/run-verdict:
+    post:
+      operationId: runGroupVerdict
+      tags: [trips]
+      summary: Run AI group verdict (coordinator only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: decId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated decision with verdict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDecisionDetail"
+
+  /trips/{id}/decisions/{decId}/assign:
+    patch:
+      operationId: assignGroupDecision
+      tags: [trips]
+      summary: Assign a decision to a member (coordinator only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: decId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignDecisionBody"
+      responses:
+        "200":
+          description: Updated decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDecisionDetail"
+
+  /trips/{id}/decisions/{decId}/confirm:
+    patch:
+      operationId: confirmGroupDecision
+      tags: [trips]
+      summary: Confirm a decision as booked
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: decId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Decision marked done
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDecisionDetail"
+
   /trips/{id}/join:
     post:
       operationId: joinTrip
@@ -685,6 +881,141 @@ components:
           nullable: true
       required:
         - inviteToken
+
+    WhoGetsWhatItem:
+      type: object
+      properties:
+        userId:
+          type: string
+        memberName:
+          type: string
+        assignment:
+          type: string
+      required:
+        - userId
+        - memberName
+        - assignment
+
+    GroupVerdictJson:
+      allOf:
+        - $ref: "#/components/schemas/VerdictJson"
+        - type: object
+          properties:
+            whoGetsWhat:
+              type: array
+              items:
+                $ref: "#/components/schemas/WhoGetsWhatItem"
+            theSeam:
+              type: string
+          required:
+            - whoGetsWhat
+            - theSeam
+
+    GroupDecision:
+      type: object
+      properties:
+        id:
+          type: integer
+        tripId:
+          type: integer
+        question:
+          type: string
+        status:
+          type: string
+          enum: [undecided, assigned, done]
+        verdictJson:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/GroupVerdictJson"
+        assignedTo:
+          type: string
+          nullable: true
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - tripId
+        - question
+        - status
+        - createdBy
+        - createdAt
+
+    DecisionComment:
+      type: object
+      properties:
+        id:
+          type: integer
+        decisionId:
+          type: integer
+        userId:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - decisionId
+        - userId
+        - content
+        - createdAt
+
+    GroupDecisionDetail:
+      allOf:
+        - $ref: "#/components/schemas/GroupDecision"
+        - type: object
+          properties:
+            comments:
+              type: array
+              items:
+                $ref: "#/components/schemas/DecisionComment"
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/TripMember"
+          required:
+            - comments
+            - members
+
+    CreateGroupDecisionBody:
+      type: object
+      properties:
+        question:
+          type: string
+      required:
+        - question
+
+    CreateCommentBody:
+      type: object
+      properties:
+        content:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+      required:
+        - content
+
+    AssignDecisionBody:
+      type: object
+      properties:
+        assignedTo:
+          type: string
+      required:
+        - assignedTo
 
     ScrapeResult:
       type: object

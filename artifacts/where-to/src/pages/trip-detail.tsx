@@ -1,13 +1,16 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetTrip,
   useJoinTrip,
+  useListGroupDecisions,
+  useCreateGroupDecision,
   getGetTripQueryKey,
+  getListGroupDecisionsQueryKey,
 } from "@workspace/api-client-react";
-import type { TripMember } from "@workspace/api-client-react";
+import type { TripMember, GroupDecision } from "@workspace/api-client-react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   Crown,
@@ -21,6 +24,10 @@ import {
   ArrowLeft,
   MessageSquare,
   Clock,
+  Plus,
+  CheckCircle2,
+  UserCheck,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -108,6 +115,109 @@ function CopyInviteLinkButton({ tripId, inviteToken }: { tripId: number; inviteT
   );
 }
 
+function DecisionStatusBadge({ status }: { status: string }) {
+  if (status === "done") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <CheckCircle2 className="h-2.5 w-2.5" />
+        Done
+      </span>
+    );
+  }
+  if (status === "assigned") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200">
+        <UserCheck className="h-2.5 w-2.5" />
+        Assigned
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 bg-muted text-muted-foreground border border-border">
+      Open
+    </span>
+  );
+}
+
+function DecisionCard({ decision, tripId, inviteToken }: { decision: GroupDecision; tripId: number; inviteToken?: string }) {
+  const href = `/trips/${tripId}/decisions/${decision.id}${inviteToken ? `?invite=${inviteToken}` : ""}`;
+  return (
+    <Link href={href}>
+      <div className="flex items-center justify-between gap-3 p-4 border border-border hover:bg-accent/40 transition-colors cursor-pointer group">
+        <div className="flex-1 min-w-0 space-y-1">
+          <p className="text-sm font-medium text-foreground truncate leading-snug">
+            {decision.question}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DecisionStatusBadge status={decision.status} />
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(decision.createdAt), { addSuffix: true })}
+            </span>
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 group-hover:text-foreground transition-colors" />
+      </div>
+    </Link>
+  );
+}
+
+function CreateDecisionDialog({ tripId, onCreated }: { tripId: number; onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const { toast } = useToast();
+  const createDecision = useCreateGroupDecision();
+
+  const handleCreate = async () => {
+    const trimmed = question.trim();
+    if (!trimmed) return;
+    try {
+      await createDecision.mutateAsync({ id: tripId, data: { question: trimmed } });
+      setQuestion("");
+      setOpen(false);
+      onCreated();
+      toast({ title: "Decision room created" });
+    } catch {
+      toast({ title: "Failed to create decision room", variant: "destructive" });
+    }
+  };
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-2">
+        <Plus className="h-3.5 w-3.5" />
+        New decision
+      </Button>
+    );
+  }
+
+  return (
+    <div className="border border-border p-4 space-y-3 bg-card">
+      <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">New decision room</p>
+      <textarea
+        className="w-full border border-border bg-background text-foreground text-sm px-3 py-2 resize-none min-h-[80px] focus:outline-none focus:ring-1 focus:ring-ring"
+        placeholder="What does the group need to decide? e.g. Sicily vs Tokyo for June, or how to structure 10 days in Japan..."
+        value={question}
+        onChange={e => setQuestion(e.target.value)}
+        autoFocus
+      />
+      <div className="flex gap-2 justify-end">
+        <Button variant="ghost" size="sm" onClick={() => { setOpen(false); setQuestion(""); }}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleCreate}
+          disabled={!question.trim() || createDecision.isPending}
+          className="gap-2"
+        >
+          {createDecision.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          Create
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>();
   const tripId = parseInt(id ?? "0");
@@ -123,10 +233,9 @@ export default function TripDetail() {
   const inviteToken = params.get("invite") ?? undefined;
 
   const tripParams = inviteToken ? { invite: inviteToken } : undefined;
-  const { data: trip, isLoading, isError } = useGetTrip(
-    tripId,
-    tripParams
-  );
+  const { data: trip, isLoading, isError } = useGetTrip(tripId, tripParams);
+
+  const { data: decisions = [] } = useListGroupDecisions(tripId, tripParams);
 
   useEffect(() => {
     if (!isLoaded || !trip || !user || !inviteToken || hasAutoJoined.current) return;
@@ -142,6 +251,7 @@ export default function TripDetail() {
       },
     }).then(() => {
       queryClient.invalidateQueries({ queryKey: getGetTripQueryKey(tripId) });
+      queryClient.invalidateQueries({ queryKey: getListGroupDecisionsQueryKey(tripId) });
       toast({ title: "You've joined the trip!" });
     }).catch(() => {
       hasAutoJoined.current = false;
@@ -179,6 +289,8 @@ export default function TripDetail() {
   const dateRange = formatDateRange(trip.startDate, trip.endDate);
   const coordinatorMember = trip.members.find((m) => m.role === "coordinator");
   const regularMembers = trip.members.filter((m) => m.role !== "coordinator");
+
+  const openCount = decisions.filter(d => d.status === "undecided").length;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -241,7 +353,7 @@ export default function TripDetail() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">
-        {/* Decisions section (placeholder) */}
+        {/* Decisions section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-serif font-semibold flex items-center gap-2">
@@ -249,16 +361,42 @@ export default function TripDetail() {
               Decision rooms
             </h2>
             <span className="text-sm text-muted-foreground">
-              {trip.openDecisionCount === 0
-                ? "None open"
-                : `${trip.openDecisionCount} open`}
+              {openCount === 0 ? "None open" : `${openCount} open`}
             </span>
           </div>
-          <div className="border border-dashed border-border p-10 flex flex-col items-center justify-center text-center">
-            <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground font-medium text-sm">No decision rooms yet</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">Decision rooms are coming soon.</p>
-          </div>
+
+          {isCoordinator && (
+            <CreateDecisionDialog
+              tripId={trip.id}
+              onCreated={() => {
+                queryClient.invalidateQueries({ queryKey: getListGroupDecisionsQueryKey(tripId) });
+                queryClient.invalidateQueries({ queryKey: getGetTripQueryKey(tripId) });
+              }}
+            />
+          )}
+
+          {decisions.length === 0 ? (
+            <div className="border border-dashed border-border p-10 flex flex-col items-center justify-center text-center">
+              <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground font-medium text-sm">No decision rooms yet</p>
+              {isCoordinator ? (
+                <p className="text-xs text-muted-foreground/60 mt-1">Create one above to start planning together.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground/60 mt-1">The coordinator will create decision rooms when the group is ready.</p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {decisions.map(decision => (
+                <DecisionCard
+                  key={decision.id}
+                  decision={decision}
+                  tripId={trip.id}
+                  inviteToken={inviteToken}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Members sidebar */}

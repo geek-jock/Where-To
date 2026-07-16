@@ -6,14 +6,24 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./assignDecisionBody";
+export * from "./createCommentBody";
 export * from "./createDecisionBody";
+export * from "./createGroupDecisionBody";
 export * from "./createSaveBody";
 export * from "./createTripBody";
 export * from "./decision";
+export * from "./decisionComment";
 export * from "./deleteResult";
+export * from "./getGroupDecisionParams";
 export * from "./getTripParams";
+export * from "./groupDecision";
+export * from "./groupDecisionDetail";
+export * from "./groupDecisionStatus";
+export * from "./groupVerdictJson";
 export * from "./healthStatus";
 export * from "./joinTripBody";
+export * from "./listGroupDecisionsParams";
 export * from "./save";
 export * from "./scrapeResult";
 export * from "./scrapeUrlBody";
@@ -24,3 +34,4 @@ export * from "./tripMember";
 export * from "./updateSaveBody";
 export * from "./verdictJson";
 export * from "./verdictJsonType";
+export * from "./whoGetsWhatItem";

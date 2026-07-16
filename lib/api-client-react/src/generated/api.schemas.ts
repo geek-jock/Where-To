@@ -144,6 +144,66 @@ export interface JoinTripBody {
   avatarUrl?: string | null;
 }
 
+export interface WhoGetsWhatItem {
+  userId: string;
+  memberName: string;
+  assignment: string;
+}
+
+export type GroupVerdictJson = VerdictJson & {
+  whoGetsWhat: WhoGetsWhatItem[];
+  theSeam: string;
+};
+
+export type GroupDecisionStatus =
+  (typeof GroupDecisionStatus)[keyof typeof GroupDecisionStatus];
+
+export const GroupDecisionStatus = {
+  undecided: "undecided",
+  assigned: "assigned",
+  done: "done",
+} as const;
+
+export interface GroupDecision {
+  id: number;
+  tripId: number;
+  question: string;
+  status: GroupDecisionStatus;
+  verdictJson?: GroupVerdictJson | null;
+  assignedTo?: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface DecisionComment {
+  id: number;
+  decisionId: number;
+  userId: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  content: string;
+  createdAt: string;
+}
+
+export type GroupDecisionDetail = GroupDecision & {
+  comments: DecisionComment[];
+  members: TripMember[];
+};
+
+export interface CreateGroupDecisionBody {
+  question: string;
+}
+
+export interface CreateCommentBody {
+  content: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface AssignDecisionBody {
+  assignedTo: string;
+}
+
 export interface ScrapeResult {
   url: string;
   title?: string | null;
@@ -153,5 +213,13 @@ export interface ScrapeResult {
 }
 
 export type GetTripParams = {
+  invite?: string;
+};
+
+export type ListGroupDecisionsParams = {
+  invite?: string;
+};
+
+export type GetGroupDecisionParams = {
   invite?: string;
 };

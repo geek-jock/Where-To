@@ -317,6 +317,450 @@ export const GetTripResponse = zod
   );
 
 /**
+ * @summary List decision rooms for a trip
+ */
+export const ListGroupDecisionsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListGroupDecisionsQueryParams = zod.object({
+  invite: zod.coerce.string().optional(),
+});
+
+export const listGroupDecisionsResponseVerdictJsonOneOneTravelPatternsMin = 3;
+export const listGroupDecisionsResponseVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const listGroupDecisionsResponseVerdictJsonOneOneAnchorsMin = 3;
+export const listGroupDecisionsResponseVerdictJsonOneOneAnchorsMax = 3;
+
+export const ListGroupDecisionsResponseItem = zod.object({
+  id: zod.number(),
+  tripId: zod.number(),
+  question: zod.string(),
+  status: zod.enum(["undecided", "assigned", "done"]),
+  verdictJson: zod
+    .object({
+      type: zod.enum(["choose", "structure"]),
+      verdict: zod.string(),
+      travelPatterns: zod
+        .array(zod.string())
+        .min(listGroupDecisionsResponseVerdictJsonOneOneTravelPatternsMin)
+        .max(listGroupDecisionsResponseVerdictJsonOneOneTravelPatternsMax),
+      coreConflict: zod.string(),
+      whatYoureMissing: zod.string(),
+      whyThisFits: zod.string(),
+      tradeoffs: zod.string(),
+      avoidIf: zod.array(zod.string()),
+      nextMove: zod.string(),
+      anchors: zod
+        .array(zod.string())
+        .min(listGroupDecisionsResponseVerdictJsonOneOneAnchorsMin)
+        .max(listGroupDecisionsResponseVerdictJsonOneOneAnchorsMax),
+      timingConfidence: zod.string(),
+      stopDoingThis: zod.string(),
+      usedSaveIds: zod.array(zod.number()),
+    })
+    .and(
+      zod.object({
+        whoGetsWhat: zod.array(
+          zod.object({
+            userId: zod.string(),
+            memberName: zod.string(),
+            assignment: zod.string(),
+          }),
+        ),
+        theSeam: zod.string(),
+      }),
+    )
+    .nullish(),
+  assignedTo: zod.string().nullish(),
+  createdBy: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListGroupDecisionsResponse = zod.array(
+  ListGroupDecisionsResponseItem,
+);
+
+/**
+ * @summary Create a decision room (coordinator only)
+ */
+export const CreateGroupDecisionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CreateGroupDecisionBody = zod.object({
+  question: zod.string(),
+});
+
+/**
+ * @summary Get a decision room with comments and members
+ */
+export const GetGroupDecisionParams = zod.object({
+  id: zod.coerce.number(),
+  decId: zod.coerce.number(),
+});
+
+export const GetGroupDecisionQueryParams = zod.object({
+  invite: zod.coerce.string().optional(),
+});
+
+export const getGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMin = 3;
+export const getGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const getGroupDecisionResponseOneVerdictJsonOneOneAnchorsMin = 3;
+export const getGroupDecisionResponseOneVerdictJsonOneOneAnchorsMax = 3;
+
+export const GetGroupDecisionResponse = zod
+  .object({
+    id: zod.number(),
+    tripId: zod.number(),
+    question: zod.string(),
+    status: zod.enum(["undecided", "assigned", "done"]),
+    verdictJson: zod
+      .object({
+        type: zod.enum(["choose", "structure"]),
+        verdict: zod.string(),
+        travelPatterns: zod
+          .array(zod.string())
+          .min(getGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMin)
+          .max(getGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMax),
+        coreConflict: zod.string(),
+        whatYoureMissing: zod.string(),
+        whyThisFits: zod.string(),
+        tradeoffs: zod.string(),
+        avoidIf: zod.array(zod.string()),
+        nextMove: zod.string(),
+        anchors: zod
+          .array(zod.string())
+          .min(getGroupDecisionResponseOneVerdictJsonOneOneAnchorsMin)
+          .max(getGroupDecisionResponseOneVerdictJsonOneOneAnchorsMax),
+        timingConfidence: zod.string(),
+        stopDoingThis: zod.string(),
+        usedSaveIds: zod.array(zod.number()),
+      })
+      .and(
+        zod.object({
+          whoGetsWhat: zod.array(
+            zod.object({
+              userId: zod.string(),
+              memberName: zod.string(),
+              assignment: zod.string(),
+            }),
+          ),
+          theSeam: zod.string(),
+        }),
+      )
+      .nullish(),
+    assignedTo: zod.string().nullish(),
+    createdBy: zod.string(),
+    createdAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      comments: zod.array(
+        zod.object({
+          id: zod.number(),
+          decisionId: zod.number(),
+          userId: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          content: zod.string(),
+          createdAt: zod.coerce.date(),
+        }),
+      ),
+      members: zod.array(
+        zod.object({
+          tripId: zod.number(),
+          userId: zod.string(),
+          role: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          joinedAt: zod.coerce.date(),
+        }),
+      ),
+    }),
+  );
+
+/**
+ * @summary Post a comment in a decision room
+ */
+export const CreateDecisionCommentParams = zod.object({
+  id: zod.coerce.number(),
+  decId: zod.coerce.number(),
+});
+
+export const CreateDecisionCommentBody = zod.object({
+  content: zod.string(),
+  displayName: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
+});
+
+/**
+ * @summary Run AI group verdict (coordinator only)
+ */
+export const RunGroupVerdictParams = zod.object({
+  id: zod.coerce.number(),
+  decId: zod.coerce.number(),
+});
+
+export const runGroupVerdictResponseOneVerdictJsonOneOneTravelPatternsMin = 3;
+export const runGroupVerdictResponseOneVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const runGroupVerdictResponseOneVerdictJsonOneOneAnchorsMin = 3;
+export const runGroupVerdictResponseOneVerdictJsonOneOneAnchorsMax = 3;
+
+export const RunGroupVerdictResponse = zod
+  .object({
+    id: zod.number(),
+    tripId: zod.number(),
+    question: zod.string(),
+    status: zod.enum(["undecided", "assigned", "done"]),
+    verdictJson: zod
+      .object({
+        type: zod.enum(["choose", "structure"]),
+        verdict: zod.string(),
+        travelPatterns: zod
+          .array(zod.string())
+          .min(runGroupVerdictResponseOneVerdictJsonOneOneTravelPatternsMin)
+          .max(runGroupVerdictResponseOneVerdictJsonOneOneTravelPatternsMax),
+        coreConflict: zod.string(),
+        whatYoureMissing: zod.string(),
+        whyThisFits: zod.string(),
+        tradeoffs: zod.string(),
+        avoidIf: zod.array(zod.string()),
+        nextMove: zod.string(),
+        anchors: zod
+          .array(zod.string())
+          .min(runGroupVerdictResponseOneVerdictJsonOneOneAnchorsMin)
+          .max(runGroupVerdictResponseOneVerdictJsonOneOneAnchorsMax),
+        timingConfidence: zod.string(),
+        stopDoingThis: zod.string(),
+        usedSaveIds: zod.array(zod.number()),
+      })
+      .and(
+        zod.object({
+          whoGetsWhat: zod.array(
+            zod.object({
+              userId: zod.string(),
+              memberName: zod.string(),
+              assignment: zod.string(),
+            }),
+          ),
+          theSeam: zod.string(),
+        }),
+      )
+      .nullish(),
+    assignedTo: zod.string().nullish(),
+    createdBy: zod.string(),
+    createdAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      comments: zod.array(
+        zod.object({
+          id: zod.number(),
+          decisionId: zod.number(),
+          userId: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          content: zod.string(),
+          createdAt: zod.coerce.date(),
+        }),
+      ),
+      members: zod.array(
+        zod.object({
+          tripId: zod.number(),
+          userId: zod.string(),
+          role: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          joinedAt: zod.coerce.date(),
+        }),
+      ),
+    }),
+  );
+
+/**
+ * @summary Assign a decision to a member (coordinator only)
+ */
+export const AssignGroupDecisionParams = zod.object({
+  id: zod.coerce.number(),
+  decId: zod.coerce.number(),
+});
+
+export const AssignGroupDecisionBody = zod.object({
+  assignedTo: zod.string(),
+});
+
+export const assignGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMin = 3;
+export const assignGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const assignGroupDecisionResponseOneVerdictJsonOneOneAnchorsMin = 3;
+export const assignGroupDecisionResponseOneVerdictJsonOneOneAnchorsMax = 3;
+
+export const AssignGroupDecisionResponse = zod
+  .object({
+    id: zod.number(),
+    tripId: zod.number(),
+    question: zod.string(),
+    status: zod.enum(["undecided", "assigned", "done"]),
+    verdictJson: zod
+      .object({
+        type: zod.enum(["choose", "structure"]),
+        verdict: zod.string(),
+        travelPatterns: zod
+          .array(zod.string())
+          .min(assignGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMin)
+          .max(
+            assignGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMax,
+          ),
+        coreConflict: zod.string(),
+        whatYoureMissing: zod.string(),
+        whyThisFits: zod.string(),
+        tradeoffs: zod.string(),
+        avoidIf: zod.array(zod.string()),
+        nextMove: zod.string(),
+        anchors: zod
+          .array(zod.string())
+          .min(assignGroupDecisionResponseOneVerdictJsonOneOneAnchorsMin)
+          .max(assignGroupDecisionResponseOneVerdictJsonOneOneAnchorsMax),
+        timingConfidence: zod.string(),
+        stopDoingThis: zod.string(),
+        usedSaveIds: zod.array(zod.number()),
+      })
+      .and(
+        zod.object({
+          whoGetsWhat: zod.array(
+            zod.object({
+              userId: zod.string(),
+              memberName: zod.string(),
+              assignment: zod.string(),
+            }),
+          ),
+          theSeam: zod.string(),
+        }),
+      )
+      .nullish(),
+    assignedTo: zod.string().nullish(),
+    createdBy: zod.string(),
+    createdAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      comments: zod.array(
+        zod.object({
+          id: zod.number(),
+          decisionId: zod.number(),
+          userId: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          content: zod.string(),
+          createdAt: zod.coerce.date(),
+        }),
+      ),
+      members: zod.array(
+        zod.object({
+          tripId: zod.number(),
+          userId: zod.string(),
+          role: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          joinedAt: zod.coerce.date(),
+        }),
+      ),
+    }),
+  );
+
+/**
+ * @summary Confirm a decision as booked
+ */
+export const ConfirmGroupDecisionParams = zod.object({
+  id: zod.coerce.number(),
+  decId: zod.coerce.number(),
+});
+
+export const confirmGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMin = 3;
+export const confirmGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMax = 3;
+
+export const confirmGroupDecisionResponseOneVerdictJsonOneOneAnchorsMin = 3;
+export const confirmGroupDecisionResponseOneVerdictJsonOneOneAnchorsMax = 3;
+
+export const ConfirmGroupDecisionResponse = zod
+  .object({
+    id: zod.number(),
+    tripId: zod.number(),
+    question: zod.string(),
+    status: zod.enum(["undecided", "assigned", "done"]),
+    verdictJson: zod
+      .object({
+        type: zod.enum(["choose", "structure"]),
+        verdict: zod.string(),
+        travelPatterns: zod
+          .array(zod.string())
+          .min(
+            confirmGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMin,
+          )
+          .max(
+            confirmGroupDecisionResponseOneVerdictJsonOneOneTravelPatternsMax,
+          ),
+        coreConflict: zod.string(),
+        whatYoureMissing: zod.string(),
+        whyThisFits: zod.string(),
+        tradeoffs: zod.string(),
+        avoidIf: zod.array(zod.string()),
+        nextMove: zod.string(),
+        anchors: zod
+          .array(zod.string())
+          .min(confirmGroupDecisionResponseOneVerdictJsonOneOneAnchorsMin)
+          .max(confirmGroupDecisionResponseOneVerdictJsonOneOneAnchorsMax),
+        timingConfidence: zod.string(),
+        stopDoingThis: zod.string(),
+        usedSaveIds: zod.array(zod.number()),
+      })
+      .and(
+        zod.object({
+          whoGetsWhat: zod.array(
+            zod.object({
+              userId: zod.string(),
+              memberName: zod.string(),
+              assignment: zod.string(),
+            }),
+          ),
+          theSeam: zod.string(),
+        }),
+      )
+      .nullish(),
+    assignedTo: zod.string().nullish(),
+    createdBy: zod.string(),
+    createdAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      comments: zod.array(
+        zod.object({
+          id: zod.number(),
+          decisionId: zod.number(),
+          userId: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          content: zod.string(),
+          createdAt: zod.coerce.date(),
+        }),
+      ),
+      members: zod.array(
+        zod.object({
+          tripId: zod.number(),
+          userId: zod.string(),
+          role: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          joinedAt: zod.coerce.date(),
+        }),
+      ),
+    }),
+  );
+
+/**
  * @summary Join a trip via invite token
  */
 export const JoinTripParams = zod.object({
