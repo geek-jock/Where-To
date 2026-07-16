@@ -104,7 +104,7 @@ export default function DemoIndex() {
       ) : (
         <View style={s.profileGrid}>
           {data.profiles.map(profile => (
-            <ProfileCard key={profile.id} profile={profile} colors={colors} onPress={() => router.push({ pathname: "/demo/[profileId]", params: { profileId: profile.id } } as never)} />
+            <ProfileCard key={profile.id} profile={profile} colors={colors} onPress={() => router.push(`/demo/${profile.id}` as never)} />
           ))}
         </View>
       )}

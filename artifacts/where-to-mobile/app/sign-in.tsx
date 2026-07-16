@@ -298,7 +298,7 @@ export default function SignInScreen() {
 
         <Pressable
           style={({ pressed }) => [styles.demoLink, { opacity: pressed ? 0.6 : 1 }]}
-          onPress={() => router.push("/demo/index" as never)}
+          onPress={() => router.push("/demo" as never)}
         >
           <Text style={styles.demoLinkText}>Explore the demo first →</Text>
         </Pressable>
