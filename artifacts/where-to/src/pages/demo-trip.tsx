@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
-import { Compass, Loader2, ArrowLeft, MapPin, Calendar, Users, CheckCircle2, Clock, MessageSquare } from "lucide-react";
+import { Link, useParams } from "wouter";
+import {
+  Compass, Loader2, ArrowLeft, MapPin, Calendar, Users,
+  CheckCircle2, Clock, MessageSquare, FileText, ChevronDown, ChevronUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSignIn } from "@clerk/react/legacy";
 import type { GroupVerdictJson } from "@workspace/api-client-react";
@@ -40,6 +43,7 @@ interface DemoTrip {
   destination: string | null;
   startDate: string | null;
   endDate: string | null;
+  overviewNotes: string | null;
   members: DemoMember[];
   decisions: DemoGroupDecision[];
 }
@@ -97,7 +101,6 @@ function DecisionCard({ dec, members }: { dec: DemoGroupDecision; members: DemoM
 
   return (
     <div className="border border-border bg-card">
-      {/* Decision header */}
       <div className="p-6 border-b border-border space-y-3">
         <div className="flex items-start justify-between gap-4">
           <h3 className="font-serif text-lg text-foreground leading-snug">{dec.question}</h3>
@@ -112,20 +115,16 @@ function DecisionCard({ dec, members }: { dec: DemoGroupDecision; members: DemoM
         )}
       </div>
 
-      {/* Verdict */}
       {dec.verdictJson ? (
         <div className="p-6 border-b border-border space-y-6">
           <div className="space-y-1">
             <p className="text-[10px] font-semibold tracking-widest uppercase text-primary/70">The verdict</p>
             <h4 className="font-serif text-2xl text-foreground leading-tight">{dec.verdictJson.verdict}</h4>
           </div>
-
           {dec.verdictJson.whyThisFits && (
             <p className="text-sm text-muted-foreground leading-relaxed">{dec.verdictJson.whyThisFits}</p>
           )}
-
           <WhoGetsWhatSection items={dec.verdictJson.whoGetsWhat} />
-
           {dec.verdictJson.theSeam && (
             <blockquote className="border-l-2 border-primary pl-4 italic text-sm text-muted-foreground leading-relaxed">
               {dec.verdictJson.theSeam}
@@ -138,7 +137,6 @@ function DecisionCard({ dec, members }: { dec: DemoGroupDecision; members: DemoM
         </div>
       )}
 
-      {/* Comments */}
       {dec.comments.length > 0 && (
         <div className="p-6 space-y-4">
           <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/60">
@@ -170,20 +168,63 @@ function DecisionCard({ dec, members }: { dec: DemoGroupDecision; members: DemoM
   );
 }
 
+function OverviewNotes({ notes }: { notes: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const lines = notes.split("\n");
+  const isLong = lines.length > 12;
+  const displayed = isLong && !expanded ? lines.slice(0, 12).join("\n") : notes;
+
+  return (
+    <div className="border border-border bg-card">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between p-5 hover:bg-muted/30 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Trip notes</span>
+        </div>
+        {isLong ? (
+          expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        ) : null}
+      </button>
+      <div className="px-5 pb-5">
+        <pre className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap font-sans">{displayed}</pre>
+        {isLong && !expanded && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="mt-2 text-xs text-primary hover:underline"
+          >
+            Show all notes
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DemoTrip() {
+  const params = useParams<{ id: string }>();
   const [trip, setTrip] = useState<DemoTrip | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const { signIn, isLoaded } = useSignIn();
 
   useEffect(() => {
-    fetch(`${API_BASE}/demo`)
-      .then(r => r.json())
-      .then((data: { demoTrip?: DemoTrip | null }) => {
-        setTrip(data.demoTrip ?? null);
+    if (!params.id) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    fetch(`${API_BASE}/demo/trips/${params.id}`)
+      .then(r => {
+        if (!r.ok) { setNotFound(true); return null; }
+        return r.json() as Promise<DemoTrip>;
       })
-      .catch(() => setTrip(null))
+      .then(data => { if (data) setTrip(data); })
+      .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [params.id]);
 
   async function handleGoogleSignIn() {
     if (!isLoaded || !signIn) return;
@@ -197,9 +238,11 @@ export default function DemoTrip() {
   const start = formatDate(trip?.startDate ?? null);
   const end = formatDate(trip?.endDate ?? null);
 
+  const bookedCount = trip?.decisions.filter(d => d.status === "done").length ?? 0;
+  const pendingCount = trip?.decisions.filter(d => d.status !== "done").length ?? 0;
+
   return (
     <div className="min-h-[100dvh] bg-background">
-      {/* Header */}
       <header className="border-b border-border px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
           <Compass className="h-5 w-5 text-primary" />
@@ -214,18 +257,17 @@ export default function DemoTrip() {
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : !trip ? (
+      ) : notFound || !trip ? (
         <div className="max-w-2xl mx-auto px-6 py-20 text-center space-y-4">
-          <p className="text-muted-foreground">Demo trip not found. Run the seed script to generate it.</p>
+          <p className="text-muted-foreground">Trip not found. Run the seed script to generate demo data.</p>
           <Link href="/demo" className="text-primary hover:underline text-sm">← Back to demo</Link>
         </div>
       ) : (
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-10 md:py-14 space-y-10">
 
-          {/* Back */}
           <Link href="/demo" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-3.5 w-3.5" />
-            All demo profiles
+            All demo trips
           </Link>
 
           {/* Trip header */}
@@ -270,9 +312,24 @@ export default function DemoTrip() {
                 </div>
               ))}
             </div>
+
+            {/* Stats row */}
+            <div className="flex gap-5 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                {bookedCount} booked
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-amber-600" />
+                {pendingCount} open
+              </span>
+            </div>
           </div>
 
-          {/* Explanation */}
+          {/* Overview notes */}
+          {trip.overviewNotes && <OverviewNotes notes={trip.overviewNotes} />}
+
+          {/* How group decisions work */}
           <div className="bg-muted/40 border border-border p-5 space-y-2">
             <p className="text-sm font-medium text-foreground">How group decisions work</p>
             <p className="text-sm text-muted-foreground leading-relaxed">

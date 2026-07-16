@@ -1,7 +1,7 @@
 /**
- * Seed 3 demo profiles with realistic saves, AI-generated decisions, travel
- * profiles, a group trip with 3 decision rooms, comments, and a bilateral
- * friend share between Elena and Nina.
+ * Seed 5 demo profiles with realistic saves, AI-generated decisions,
+ * travel profiles, 3 group trips with overview notes, decision rooms,
+ * comments, and bilateral friend shares.
  *
  * Run:
  *   cd artifacts/api-server && \
@@ -19,12 +19,13 @@ import {
   decisionCommentsTable,
   userProfilesTable,
   saveShareRequestsTable,
+  tripOverviewNotesTable,
 } from "@workspace/db";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { verdictJsonSchema, groupVerdictJsonSchema } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 
-const DEMO_USER_IDS = ["demo_elena", "demo_james", "demo_nina"];
+const DEMO_USER_IDS = ["demo_elena", "demo_james", "demo_nina", "demo_marco", "demo_priya"];
 
 // ── Shared AI prompts (same as production) ────────────────────────────────────
 
@@ -434,6 +435,172 @@ const NINA_SAVES: SaveInput[] = [
   },
 ];
 
+const MARCO_SAVES: SaveInput[] = [
+  {
+    url: "https://www.ericeira.surf/surf-spots/",
+    note: "ericeira is the only world surfing reserve in europe. the ribeira d'ilhas spot looks doable at my level if i time it right. an hour from lisbon is perfect",
+    scrapedTitle: "Ericeira Surf Spots Guide — World Surfing Reserve",
+    description: "Ericeira's world surfing reserve covers 8 surf spots across 4km of coastline — Ribeira d'Ilhas handles beginners on smaller days, experts on swells over 2m.",
+    placeName: "Ericeira", countryCode: "PT", lat: 38.96, lng: -9.42,
+    tags: ["surf", "Portugal", "Atlantic", "nomad", "outdoors"], category: "activity",
+  },
+  {
+    url: "https://nomadlist.com/las-palmas-de-gran-canaria",
+    note: "las palmas keeps topping nomad rankings for a reason. winter sun, cheap coffee, surf at las canteras right in the city. been thinking about this for february",
+    scrapedTitle: "Las Palmas de Gran Canaria — Nomad List",
+    description: "Las Palmas ranks #1 for European winter nomads — year-round 22°C, Las Canteras city beach surf, fiber in most cafes, and cost of living 30% below Lisbon.",
+    placeName: "Gran Canaria", countryCode: "ES", lat: 28.12, lng: -15.43,
+    tags: ["nomad", "surf", "Spain", "Canaries", "remote work"], category: "destination",
+  },
+  {
+    url: "https://www.timeout.com/lisbon/things-to-do/best-coworking-spaces-in-lisbon",
+    note: "the outsite lisbon rooftop is the one everyone mentions. €25/day sounds steep but if the wifi is actually reliable it's worth it vs fighting cafe noise",
+    scrapedTitle: "The best coworking spaces in Lisbon",
+    description: "Outsite Lisbon's rooftop coworking is the cleanest setup for nomads — €25/day or €350/month, reliable gigabit wifi, and standing desks with river views.",
+    placeName: "Lisbon", countryCode: "PT", lat: 38.72, lng: -9.14,
+    tags: ["Portugal", "coworking", "nomad", "remote work", "city"], category: "coworking",
+  },
+  {
+    url: "https://www.madeira.best/coworking-and-digital-nomad/",
+    note: "funchal is genuinely affordable for a EU destination. the levada walks look incredible and you can surf on the north coast",
+    scrapedTitle: "Madeira for Digital Nomads — The Complete 2025 Guide",
+    description: "Funchal has the best nomad infrastructure in the Atlantic islands — NOS fiber, coworking from €15/day, levada walking trails, and surf at Jardim do Mar.",
+    placeName: "Madeira", countryCode: "PT", lat: 32.66, lng: -16.92,
+    tags: ["Portugal", "nomad", "surf", "hiking", "Atlantic"], category: "destination",
+  },
+  {
+    url: "https://www.surfersvillage.com/bali-surfing/canggu/",
+    note: "canggu is oversaturated now but echo beach still produces consistent lefts without the kuta crowds. need to figure out if november or april is better",
+    scrapedTitle: "Surfing Canggu, Bali — Echo Beach to Pererenan",
+    description: "Canggu's Echo Beach handles consistent 1–2m lefts from April to October — Pererenan is quieter than the main break and only 10 minutes west by scooter.",
+    placeName: "Bali", countryCode: "ID", lat: -8.65, lng: 115.13,
+    tags: ["surf", "Bali", "Indonesia", "nomad", "affordable"], category: "activity",
+  },
+  {
+    url: "https://nomadlist.com/chiang-mai",
+    note: "chiang mai is the classic nomad hub for a reason. 12mbps average on nomad wifi, $600/month for a nice apartment, saturday walking street for produce",
+    scrapedTitle: "Chiang Mai — Nomad List",
+    description: "Chiang Mai: $600–900/month all-in, 90+ coworking spaces, food from $1–3, and a genuinely walkable old city once you get off the tourist circuit.",
+    placeName: "Chiang Mai", countryCode: "TH", lat: 18.79, lng: 98.98,
+    tags: ["Thailand", "nomad", "affordable", "remote work", "Asia"], category: "destination",
+  },
+  {
+    url: "https://www.thesurfatlas.com/surf-spots/morocco/taghazout/",
+    note: "taghazout surf season is october to april. anchor point is a world class wave and the town is still affordable. might combine with a few days in agadir",
+    scrapedTitle: "Taghazout Surf Guide — Morocco's Best Wave",
+    description: "Taghazout's Anchor Point produces world-class right-handers from October to March — the town is scruffy and cheap, surf camps from €30/day including accommodation.",
+    placeName: "Taghazout", countryCode: "MA", lat: 30.54, lng: -9.71,
+    tags: ["surf", "Morocco", "Africa", "affordable", "off-season"], category: "activity",
+  },
+  {
+    url: "https://www.surfline.com/surf-report/peniche/5842041f4e65fad6a7708912",
+    note: "supertubos is the portuguese pipe. if i'm basing in lisbon i should make a weekend of this. 90 minutes north, camping right by the break",
+    scrapedTitle: "Peniche Surf Report & Forecast — Supertubos",
+    description: "Peniche's Supertubos is one of Europe's best beach breaks — a 90-min drive from Lisbon, camping 200m from the shore, and consistent hollow barrels October through April.",
+    placeName: "Peniche", countryCode: "PT", lat: 39.35, lng: -9.38,
+    tags: ["surf", "Portugal", "Atlantic", "camping", "weekend"], category: "activity",
+  },
+  {
+    url: "https://nomadlist.com/tbilisi",
+    note: "tbilisi is having a moment right now. visa on arrival, wine culture, soviet architecture, startup scene. i had no idea it was this good",
+    scrapedTitle: "Tbilisi, Georgia — Nomad List",
+    description: "Tbilisi: 1-year visa on arrival for most nationalities, $700/month living costs, wine bars in sulfur bath district, fast fiber in co-working cafes, mountains 1hr away.",
+    placeName: "Tbilisi", countryCode: "GE", lat: 41.69, lng: 44.83,
+    tags: ["Georgia", "nomad", "wine", "Caucasus", "affordable"], category: "destination",
+  },
+  {
+    url: "https://www.lonelyplanet.com/articles/digital-nomad-guide-mexico-city",
+    note: "roma norte for a month sounds ideal. the coffee scene is apparently serious, it's cheap relative to european cities, and there are waves 3 hours away in oaxaca coast",
+    scrapedTitle: "Mexico City for Digital Nomads: Roma Norte and Beyond",
+    description: "Mexico City's Roma Norte offers cafe wifi culture at $2/coffee, furnished apartments from $900/month, and an easy overnight bus to surf breaks at Zipolite.",
+    placeName: "Mexico City", countryCode: "MX", lat: 19.43, lng: -99.13,
+    tags: ["Mexico", "nomad", "food", "remote work", "surf"], category: "destination",
+  },
+];
+
+const PRIYA_SAVES: SaveInput[] = [
+  {
+    url: "https://www.theworlds50best.com/the-list/1-10.html",
+    note: "using this as a baseline for peru vs japan comparison. table 1 was worth it even just for the dashi — still thinking about it",
+    scrapedTitle: "The World's 50 Best Restaurants 2025",
+    description: "The World's 50 Best 2025 list — useful as a starting framework even if you end up off-list. The top ten alone requires booking 3–6 months ahead.",
+    placeName: "Global", countryCode: "JP", lat: 35.68, lng: 139.69,
+    tags: ["fine dining", "Michelin", "Japan", "research", "food"], category: "restaurant",
+  },
+  {
+    url: "https://www.theguardian.com/travel/2023/sep/12/kyoto-kaiseki-dinner-guide-restaurants",
+    note: "kyoto kaiseki is the meal i keep putting off because of the price. this guardian piece made it feel less intimidating — some courses are under ¥15,000",
+    scrapedTitle: "A guide to kyoto's best kaiseki restaurants — from the affordable to the extraordinary",
+    description: "Kyoto kaiseki ranges from ¥8,000 lunch courses to ¥50,000 dinner experiences — the mid-range (¥15–20k) hits all the seasonal precision without the full ceremonial overhead.",
+    placeName: "Kyoto", countryCode: "JP", lat: 34.97, lng: 135.77,
+    tags: ["Japan", "kaiseki", "fine dining", "seasonal", "Kyoto"], category: "restaurant",
+  },
+  {
+    url: "https://www.eater.com/maps/best-san-sebastian-restaurants-basque-country",
+    note: "san sebastian is on my standing list. the pintxos bars in parte vieja are non-negotiable but arzak for one dinner is the real goal",
+    scrapedTitle: "Where to Eat in San Sebastián Right Now",
+    description: "San Sebastián packs more Michelin stars per capita than any city in the world — Arzak and Mugaritz for the benchmark, Ganbara and Bar Bergara for pintxos with no compromise.",
+    placeName: "San Sebastián", countryCode: "ES", lat: 43.32, lng: -1.98,
+    tags: ["Spain", "Basque", "fine dining", "pintxos", "Michelin"], category: "restaurant",
+  },
+  {
+    url: "https://www.bonappetit.com/story/best-restaurants-mumbai-india",
+    note: "the bombay canteen is what i show people when they say indian food is just curry. their thali has 11 components. need to get back",
+    scrapedTitle: "The Best Restaurants in Mumbai Right Now",
+    description: "Mumbai's dining scene runs from The Bombay Canteen's modern Indian thali to Wasabi by Morimoto in Colaba — the Bandra dining strip competes with any neighbourhood in Asia.",
+    placeName: "Mumbai", countryCode: "IN", lat: 19.08, lng: 72.88,
+    tags: ["India", "fine dining", "food", "city", "modern Indian"], category: "restaurant",
+  },
+  {
+    url: "https://www.japantimes.co.jp/food/2023/11/osaka-street-food-guide-dotonbori/",
+    note: "takoyaki at the right place in dotonbori is not a tourist thing — it's actually one of the better snacks in the world. the japan times piece gets this right",
+    scrapedTitle: "The real guide to Osaka street food in Dotonbori",
+    description: "Osaka's Dotonbori takoyaki benchmark: Wanaka takoyaki, Aizuya, or the Kuromon Market stalls — the correct order is always 8 pieces, standing, with pickled ginger.",
+    placeName: "Osaka", countryCode: "JP", lat: 34.67, lng: 135.50,
+    tags: ["Japan", "street food", "Osaka", "food", "affordable"], category: "market",
+  },
+  {
+    url: "https://guide.michelin.com/en/article/dining-out/lyon-bouchon-guide-authentic",
+    note: "lyon bouchons are what i keep referencing when people ask me about traditional french food. daniel et denise is the benchmark — been twice",
+    scrapedTitle: "Lyon's Bouchon Culture: The Authentic Michelin Guide",
+    description: "Lyon's bouchons are the last living example of Lyonnaise grandmother cooking — quenelles, andouillette, tête de veau at Daniel et Denise (three locations, all correct).",
+    placeName: "Lyon", countryCode: "FR", lat: 45.75, lng: 4.83,
+    tags: ["France", "Lyon", "traditional", "bouchon", "fine dining"], category: "restaurant",
+  },
+  {
+    url: "https://www.cntraveler.com/story/where-to-eat-in-lima-peru",
+    note: "central is the main reason peru keeps coming up in my head. maido and kjolle are the supporting cast. three proper restaurants in one city that could justify the whole flight",
+    scrapedTitle: "Where to Eat in Lima, Peru Right Now",
+    description: "Lima's top three — Central (ecosystems tasting menu), Maido (nikkei omakase), and Kjolle (Mater Iniciativa seasonal) — represent the three strongest restaurants in the hemisphere.",
+    placeName: "Lima", countryCode: "PE", lat: -12.04, lng: -77.03,
+    tags: ["Peru", "Lima", "fine dining", "Central", "South America"], category: "restaurant",
+  },
+  {
+    url: "https://www.thepurposefulnomad.com/goa-food-guide/",
+    note: "the portuguese-goan crossover food is the thing i'm most interested in. bebinca, xacuti, the prawn curries. not the tourist beach shacks",
+    scrapedTitle: "Goa Food Guide: What to Eat Beyond the Beach Shacks",
+    description: "Goa's best food is Catholic-influenced and Portuguese-crossover — bebinca cake, prawn balchão, and feni-cured fish at old family restaurants in Panjim and Margao.",
+    placeName: "Goa", countryCode: "IN", lat: 15.30, lng: 74.00,
+    tags: ["India", "Goa", "Portuguese", "food", "seafood"], category: "restaurant",
+  },
+  {
+    url: "https://www.timeout.com/istanbul/restaurants/best-restaurants-in-istanbul",
+    note: "istanbul for a long weekend is starting to feel possible. the karaköy restaurant scene has exploded apparently. and good meze is always good meze",
+    scrapedTitle: "The Best Restaurants in Istanbul Right Now",
+    description: "Istanbul's Karaköy and Cihangir neighbourhoods now rival Copenhagen for ingredient-driven cooking — meyhane culture (long meze dinners with raki) remains uniquely the city's own.",
+    placeName: "Istanbul", countryCode: "TR", lat: 41.01, lng: 28.97,
+    tags: ["Turkey", "Istanbul", "meze", "fine dining", "city"], category: "restaurant",
+  },
+  {
+    url: "https://www.eater.com/maps/hong-kong-dim-sum-guide-restaurants",
+    note: "the tim ho wan thing has always seemed like a trap to me. the proper places in sham shui po are on this eater map and they're a fraction of the price",
+    scrapedTitle: "Where to Eat Dim Sum in Hong Kong — The Serious Guide",
+    description: "Hong Kong dim sum peaks at mid-range Cantonese spots in Sham Shui Po and Sheung Wan — Sun Hing, One Dim Sum, and Victoria City all beat the tourist circuit comprehensively.",
+    placeName: "Hong Kong", countryCode: "HK", lat: 22.28, lng: 114.16,
+    tags: ["Hong Kong", "dim sum", "Cantonese", "food", "city"], category: "restaurant",
+  },
+];
+
 // ── Hardcoded travel profiles ──────────────────────────────────────────────────
 
 const TRAVEL_PROFILES: Record<string, string> = {
@@ -443,6 +610,10 @@ const TRAVEL_PROFILES: Record<string, string> = {
     "Extreme terrain chaser with limited patience for infrastructure. Goes where roads end or require permits. Plans in 10–20 day blocks for full wilderness immersion. Allocates budget to permits, guides, and helicopter access — not accommodation. Off-season is the point. Has been to every continent and still has a list.",
   demo_nina:
     "High-density city break specialist. 5–7 days, one neighbourhood per city, galleries every morning, serious dinner every night. Researches restaurant lists for weeks in advance. Leaves knowing the neighbourhood better than the highlights. Cities are the destination, not the base.",
+  demo_marco:
+    "Digital nomad with a surf schedule. Plans location decisions around swell season, coworking wifi, and cost of living. Moves every 4–8 weeks. Treats accommodation as base camp and needs a morning in the water before he can do anything useful at a desk. Has been working remotely for 6 years and has an opinion about every coworking space in Lisbon.",
+  demo_priya:
+    "Serious culinary traveler. Plans trips around 2–3 headline restaurant reservations and fills the rest with market visits and neighbourhood exploration. Keeps a running list of Michelin constellations she hasn't covered yet. Equally at home in a €80 kaiseki lunch and a €3 street taco — what matters is that it's the real thing.",
 };
 
 type ProfileSaves = {
@@ -476,99 +647,425 @@ const PROFILES: ProfileSaves[] = [
       "Spring week in Europe. Paris or Berlin for the galleries and restaurant scene?",
     ],
   },
+  {
+    userId: "demo_marco",
+    saves: MARCO_SAVES,
+    questions: [
+      "Six weeks free from November. I need to work remotely and surf every morning. Lisbon or Las Palmas de Gran Canaria?",
+      "Ten days between projects. Bali or Chiang Mai for a proper reset — somewhere I can surf and actually get work done?",
+    ],
+  },
+  {
+    userId: "demo_priya",
+    saves: PRIYA_SAVES,
+    questions: [
+      "Two weeks in Japan to eat seriously — build me a food itinerary from Tokyo to Osaka.",
+      "Spain or Peru for a culinary trip? I've already done Japan and done France. Which one has more to offer right now?",
+    ],
+  },
 ];
 
 // ── Demo trip data (hardcoded, no AI needed) ───────────────────────────────────
 
-const DEMO_TRIP_INVITE_TOKEN = "demo-trip-public";
+type GroupDecisionInput = {
+  question: string;
+  status: "done" | "assigned" | "undecided";
+  assignedTo: string | null;
+  costPerPax: string | null;
+  confirmationLink: string | null;
+  verdictJson: ReturnType<typeof groupVerdictJsonSchema.parse> | null;
+  comments: { userId: string; displayName: string; content: string }[];
+};
 
-const DEMO_GROUP_DECISIONS = [
+type TripInput = {
+  inviteToken: string;
+  name: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  coordinatorId: string;
+  overviewNotes: string;
+  members: { userId: string; role: "coordinator" | "member"; displayName: string }[];
+  decisions: GroupDecisionInput[];
+};
+
+const DEMO_TRIPS: TripInput[] = [
+  // ── Trip 1: Mediterranean September ─────────────────────────────────────────
   {
-    question: "Week one — should we split up or stay together? Everyone has different priorities.",
-    status: "done" as const,
-    assignedTo: "demo_elena",
-    costPerPax: "€420",
-    confirmationLink: "https://airbnb.com",
-    verdictJson: {
-      type: "structure" as const,
-      verdict: "Split to your strengths. Converge in Sicily on day 10.",
-      travelPatterns: [
-        "Elena roots in food-driven neighbourhoods and needs 5+ days to find her rhythm",
-        "James optimises for physical terrain — cities are layovers",
-        "Nina extracts maximum cultural density in short windows and moves fast",
-      ],
-      coreConflict: "Elena wants slow immersion, James wants altitude, Nina wants gallery density — same week, three incompatible modes",
-      whatYoureMissing: "Forced group compromise means nobody gets what they came for. Splitting week one means you actually enjoy it.",
-      whyThisFits: "Elena anchors in Puglia — masseria near Lecce, Slow Food towns, market circuit. James and Nina fly into Athens: two days at Meteora for James, Exarchia galleries and Monastiraki for Nina. All three land in Ortigia, Syracuse on day 10.",
-      tradeoffs: "You lose the group dynamic for week one. Requires everyone to be confident with solo logistics for 9 days.",
-      avoidIf: ["First trip abroad for anyone", "One person is anxious about solo travel", "Flights don't allow split routing"],
-      nextMove: "Book the Lecce masseria now — it sells in September. Athens flights are flexible.",
-      anchors: ["Lecce area, Puglia (Elena)", "Athens + Meteora (James/Nina, split)", "Ortigia, Syracuse (group reunion)"],
-      timingConfidence: "High — September is ideal for all three legs",
-      stopDoingThis: "Planning every day as a group when travel styles are fundamentally incompatible for week one",
-      usedSaveIds: [],
-      whoGetsWhat: [
-        { userId: "demo_elena", memberName: "Elena", assignment: "7 nights near Lecce — masseria, Salento markets, Ostuni hill town day" },
-        { userId: "demo_nina", memberName: "Nina", assignment: "Athens 4 nights — Exarchia galleries, Kerameikos evening, serious dinner" },
-        { userId: "demo_james", memberName: "James", assignment: "Meteora 2 nights then Pelion coast — 8-hour ridge walk, isolated beach guesthouse" },
-      ],
-      theSeam: "All three in Ortigia market, Syracuse, Saturday morning of day 10. Market starts at 7am. Nobody is late.",
-    },
-    comments: [
-      { userId: "demo_james", displayName: "James", content: "I'm not spending a week in a city. If we're going southern Italy I need at least something with elevation or I'm doing a solo detour anyway." },
-      { userId: "demo_nina", displayName: "Nina", content: "If James is going remote I'd genuinely rather have Athens to myself. I can get through three galleries before either of you have had breakfast." },
-      { userId: "demo_elena", displayName: "Elena", content: "This is exactly why we should split. I'll coordinate the Sicily reunion. Book your own week one." },
+    inviteToken: "demo-trip-public",
+    name: "Mediterranean September",
+    destination: "Southern Italy + Sicily",
+    startDate: "2025-09-01",
+    endDate: "2025-09-14",
+    coordinatorId: "demo_elena",
+    overviewNotes: `## Flights
+- Elena: Bari → Catania Sept 10 (Ryanair, €45, booked ✓)
+- James: Athens → Catania Sept 10 (Aegean, €120, booked ✓)
+- Nina: Athens → Catania Sept 10 (same flight as James ✓)
+- All out: Palermo → home Sept 14
+
+## Accommodation booked
+- Elena: Masseria near Lecce Sept 1–9 (confirmed, €420 total ✓)
+- James + Nina Athens: Exarchia hostel Sept 1–3, Meteora guesthouse Sept 4–5 (booked ✓)
+
+## Group logistics
+- Syracuse reunion: Saturday 10th, Ortigia market 7am — nobody is late
+- Shared WhatsApp group created ✓
+- James driving rental from Taormina — picking up Nina at Catania airport 2pm
+
+## Still to do
+- Book Palermo accommodation (Nina on this)
+- Ragusa Ibla hotel for Nina, 2 nights
+- Etna guided ascent for James — check availability
+- Noto granita breakfast before the flight home`,
+    members: [
+      { userId: "demo_elena", role: "coordinator", displayName: "Elena Vasquez" },
+      { userId: "demo_james", role: "member", displayName: "James Okoro" },
+      { userId: "demo_nina", role: "member", displayName: "Nina Chen" },
+    ],
+    decisions: [
+      {
+        question: "Week one — should we split up or stay together? Everyone has different priorities.",
+        status: "done",
+        assignedTo: "demo_elena",
+        costPerPax: "€420",
+        confirmationLink: "https://airbnb.com",
+        verdictJson: groupVerdictJsonSchema.parse({
+          type: "structure",
+          verdict: "Split to your strengths. Converge in Sicily on day 10.",
+          travelPatterns: [
+            "Elena roots in food-driven neighbourhoods and needs 5+ days to find her rhythm",
+            "James optimises for physical terrain — cities are layovers",
+            "Nina extracts maximum cultural density in short windows and moves fast",
+          ],
+          coreConflict: "Elena wants slow immersion, James wants altitude, Nina wants gallery density — same week, three incompatible modes",
+          whatYoureMissing: "Forced group compromise means nobody gets what they came for. Splitting week one means you actually enjoy it.",
+          whyThisFits: "Elena anchors in Puglia — masseria near Lecce, Slow Food towns, market circuit. James and Nina fly into Athens: two days at Meteora for James, Exarchia galleries and Monastiraki for Nina. All three land in Ortigia, Syracuse on day 10.",
+          tradeoffs: "You lose the group dynamic for week one. Requires everyone to be confident with solo logistics for 9 days.",
+          avoidIf: ["First trip abroad for anyone", "One person is anxious about solo travel", "Flights don't allow split routing"],
+          nextMove: "Book the Lecce masseria now — it sells in September. Athens flights are flexible.",
+          anchors: ["Lecce area, Puglia (Elena)", "Athens + Meteora (James/Nina, split)", "Ortigia, Syracuse (group reunion)"],
+          timingConfidence: "High — September is ideal for all three legs",
+          stopDoingThis: "Planning every day as a group when travel styles are fundamentally incompatible for week one",
+          usedSaveIds: [],
+          whoGetsWhat: [
+            { userId: "demo_elena", memberName: "Elena", assignment: "7 nights near Lecce — masseria, Salento markets, Ostuni hill town day" },
+            { userId: "demo_nina", memberName: "Nina", assignment: "Athens 4 nights — Exarchia galleries, Kerameikos evening, serious dinner" },
+            { userId: "demo_james", memberName: "James", assignment: "Meteora 2 nights then Pelion coast — 8-hour ridge walk, isolated beach guesthouse" },
+          ],
+          theSeam: "All three in Ortigia market, Syracuse, Saturday morning of day 10. Market starts at 7am. Nobody is late.",
+        }),
+        comments: [
+          { userId: "demo_james", displayName: "James", content: "I'm not spending a week in a city. If we're going southern Italy I need at least something with elevation or I'm doing a solo detour anyway." },
+          { userId: "demo_nina", displayName: "Nina", content: "If James is going remote I'd genuinely rather have Athens to myself. I can get through three galleries before either of you have had breakfast." },
+          { userId: "demo_elena", displayName: "Elena", content: "This is exactly why we should split. I'll coordinate the Sicily reunion. Book your own week one." },
+        ],
+      },
+      {
+        question: "Final 4 days — Sicily or Malta?",
+        status: "assigned",
+        assignedTo: "demo_nina",
+        costPerPax: null,
+        confirmationLink: null,
+        verdictJson: groupVerdictJsonSchema.parse({
+          type: "choose",
+          verdict: "Sicily. Full stop.",
+          travelPatterns: [
+            "Elena's food logic requires cultural depth — Malta can't compete with Palermo's street food density",
+            "Nina needs walkable city blocks with serious architecture and at least one gallery — Ragusa Ibla delivers",
+            "James needs one physical challenge — Etna summit is the obvious answer and he knows it",
+          ],
+          coreConflict: "Malta is the easier, more predictable choice — which is exactly why it's wrong for this group",
+          whatYoureMissing: "Malta is compact and lovely but thin on food culture and has almost no contemporary art scene. You'd eat in tourist restaurants and feel restless.",
+          whyThisFits: "Sicily has enough geographic range to give everyone their mode without compromise — baroque cities, volcanic terrain, and one of the best food regions in Europe all in four days.",
+          tradeoffs: "Why not Malta: better weather guarantee, simpler logistics, less distance. But the wrong energy for how this trip has gone.",
+          avoidIf: ["Someone has mobility issues (Etna is a full-day hike)", "You have fewer than 3 days", "It's July or August (too hot)"],
+          nextMove: "Book Palermo accommodation now. Ragusa Ibla fills fast in September.",
+          anchors: ["Palermo (Elena base)", "Ragusa Ibla (Nina, 2 nights)", "Nicolosi / Etna (James detour)"],
+          timingConfidence: "High — September is the best month in Sicily. Harvest season, no crowds.",
+          stopDoingThis: "Treating Malta as a reasonable alternative. It isn't for this trip.",
+          usedSaveIds: [],
+          whoGetsWhat: [
+            { userId: "demo_elena", memberName: "Elena", assignment: "Palermo — Ballarò and Vucciria markets, day trip to Marsala wine cantinas" },
+            { userId: "demo_nina", memberName: "Nina", assignment: "Ragusa Ibla 2 nights — baroque UNESCO walk, dinner at one serious restaurant" },
+            { userId: "demo_james", memberName: "James", assignment: "Etna summit via crater rim trail — 6-hour guided ascent, overnight in Nicolosi" },
+          ],
+          theSeam: "Noto almond granita at 8am before the flight home. Everyone makes it. Nobody is still in bed.",
+        }),
+        comments: [
+          { userId: "demo_nina", displayName: "Nina", content: "Malta feels like the sensible choice. Smaller, easier, everyone ends up in the same place." },
+          { userId: "demo_james", displayName: "James", content: "Nina I respect you but I'm not flying to the Mediterranean and skipping Etna. It's a volcano. I have standards." },
+          { userId: "demo_elena", displayName: "Elena", content: "Sicily. Malta is a different trip. The Ballarò market alone justifies it." },
+        ],
+      },
+      {
+        question: "That half-day in Catania when the split ends and before we move to Syracuse — what's the plan?",
+        status: "undecided",
+        assignedTo: null,
+        costPerPax: null,
+        confirmationLink: null,
+        verdictJson: null,
+        comments: [
+          { userId: "demo_james", displayName: "James", content: "Are we all arriving from different cities? I'm coming down from Taormina by rental car." },
+          { userId: "demo_nina", displayName: "Nina", content: "I'm on the Athens → Catania flight, arriving 2pm. Can someone meet me or is everyone fending for themselves?" },
+          { userId: "demo_elena", displayName: "Elena", content: "Train from Lecce, arrives 11am. I want to walk the fish market before you two land. James — could you pick Nina up if you're driving?" },
+          { userId: "demo_james", displayName: "James", content: "Yes. I'll swing by the airport on the way south. Nina just send me your flight number." },
+        ],
+      },
     ],
   },
+
+  // ── Trip 2: Lisbon Working Week ───────────────────────────────────────────────
   {
-    question: "Final 4 days — Sicily or Malta?",
-    status: "assigned" as const,
-    assignedTo: "demo_nina",
-    costPerPax: null,
-    confirmationLink: null,
-    verdictJson: {
-      type: "choose" as const,
-      verdict: "Sicily. Full stop.",
-      travelPatterns: [
-        "Elena's food logic requires cultural depth — Malta can't compete with Palermo's street food density",
-        "Nina needs walkable city blocks with serious architecture and at least one gallery — Ragusa Ibla delivers",
-        "James needs one physical challenge — Etna summit is the obvious answer and he knows it",
-      ],
-      coreConflict: "Malta is the easier, more predictable choice — which is exactly why it's wrong for this group",
-      whatYoureMissing: "Malta is compact and lovely but thin on food culture and has almost no contemporary art scene. You'd eat in tourist restaurants and feel restless.",
-      whyThisFits: "Sicily has enough geographic range to give everyone their mode without compromise — baroque cities, volcanic terrain, and one of the best food regions in Europe all in four days.",
-      tradeoffs: "Why not Malta: better weather guarantee, simpler logistics, less distance. But the wrong energy for how this trip has gone.",
-      avoidIf: ["Someone has mobility issues (Etna is a full-day hike)", "You have fewer than 3 days", "It's July or August (too hot)"],
-      nextMove: "Book Palermo accommodation now. Ragusa Ibla fills fast in September.",
-      anchors: ["Palermo (Elena base)", "Ragusa Ibla (Nina, 2 nights)", "Nicolosi / Etna (James detour)"],
-      timingConfidence: "High — September is the best month in Sicily. Harvest season, no crowds.",
-      stopDoingThis: "Treating Malta as a reasonable alternative. It isn't for this trip.",
-      usedSaveIds: [],
-      whoGetsWhat: [
-        { userId: "demo_elena", memberName: "Elena", assignment: "Palermo — Ballarò and Vucciria markets, day trip to Marsala wine cantinas" },
-        { userId: "demo_nina", memberName: "Nina", assignment: "Ragusa Ibla 2 nights — baroque UNESCO walk, dinner at one serious restaurant" },
-        { userId: "demo_james", memberName: "James", assignment: "Etna summit via crater rim trail — 6-hour guided ascent, overnight in Nicolosi" },
-      ],
-      theSeam: "Noto almond granita at 8am before the flight home. Everyone makes it. Nobody is still in bed.",
-    },
-    comments: [
-      { userId: "demo_nina", displayName: "Nina", content: "Malta feels like the sensible choice. Smaller, easier, everyone ends up in the same place." },
-      { userId: "demo_james", displayName: "James", content: "Nina I respect you but I'm not flying to the Mediterranean and skipping Etna. It's a volcano. I have standards." },
-      { userId: "demo_elena", displayName: "Elena", content: "Sicily. Malta is a different trip. The Ballarò market alone justifies it." },
+    inviteToken: "demo-lisbon-work",
+    name: "Lisbon Working Week",
+    destination: "Lisbon, Portugal",
+    startDate: "2026-02-01",
+    endDate: "2026-02-07",
+    coordinatorId: "demo_marco",
+    overviewNotes: `## Flights
+- Marco: London → Lisbon Feb 1 (TAP TP1309, 07:15, booked ✓)
+- Marco return: Lisbon → London Feb 7 (TAP TP1308, 21:30, booked ✓)
+- Elena arriving by train from Porto Feb 2, departing Feb 7
+
+## Accommodation
+- Marco: Airbnb near Mouraria, 6 nights (confirmed ✓ — €85/night)
+- Elena: her regular apartment near Intendente (sorted, same landlord as last time)
+
+## Coworking options researched
+- Outsite Lisbon rooftop — €25/day, gigabit wifi, Príncipe Real, book ahead
+- Second Home Ribeira — €20/day, beautiful space, occasional events
+- Coral Coworking — €15/day, Mouraria, quieter and local
+- LXFactory cafes — free with purchase, less reliable wifi but good atmosphere
+
+## Food plan
+- Market mornings: Intendente Sunday market, Mercado de Campo de Ourique Saturday
+- Shared dinners: Mouraria area — Za'atar, Taberna da Rua das Flores, Tasca do Chico
+- Coffee: Nicolau (Intendente), Hello Kristof (Príncipe Real), Fábrica (Chiado)
+- One proper dinner together somewhere serious — TBD
+
+## Still to do
+- Friday night dinner — need a verdict (see decision room)
+- Confirm coworking for the week — Marco booking Outsite, Elena usually works from home
+- Who's bringing the olive oil (Elena has a source near Intendente market)`,
+    members: [
+      { userId: "demo_marco", role: "coordinator", displayName: "Marco Silva" },
+      { userId: "demo_elena", role: "member", displayName: "Elena Vasquez" },
+    ],
+    decisions: [
+      {
+        question: "Should we anchor the full week in Lisbon or add a 2-night detour to Sintra or the Setúbal coast?",
+        status: "done",
+        assignedTo: "demo_marco",
+        costPerPax: null,
+        confirmationLink: null,
+        verdictJson: groupVerdictJsonSchema.parse({
+          type: "choose",
+          verdict: "Lisbon base. Day trips only.",
+          travelPatterns: [
+            "Marco needs reliable coworking infrastructure — remote locations mean backup hotspot stress",
+            "Elena builds neighbourhood routines that take 3+ days to settle into",
+            "Both have saved Lisbon specifically for the density of the neighbourhood experience, not the countryside",
+          ],
+          coreConflict: "Sintra and Setúbal are beautiful but they require a car, interrupt the coworking rhythm, and neither of you actually has either saved",
+          whatYoureMissing: "The Sintra palace circuit takes half a day and produces photos. You have seven days — spending two of them on a detour means you never settle.",
+          whyThisFits: "Lisbon with a Sintra day trip on a non-work morning gives you the palaces without breaking the week's rhythm. Same for Arrábida beach — an hour by car from Setúbal.",
+          tradeoffs: "You give up the feeling of 'seeing the countryside'. But neither of your saves suggest that's what you came for.",
+          avoidIf: ["You've already done Lisbon multiple times", "Someone needs a complete break from city noise", "It's a summer visit — Arrábida is worth the detour in heat"],
+          nextMove: "Lock Outsite coworking for Mon–Fri now. Wednesday morning can be Sintra if the forecast is clear.",
+          anchors: ["Mouraria / Intendente (base and evenings)", "Príncipe Real (coworking and coffee)", "Sintra day trip (mid-week)"],
+          timingConfidence: "High — February Lisbon is uncrowded and mild. Market season is good.",
+          stopDoingThis: "Adding detours to a working week. The work doesn't pause and then nothing gets done properly.",
+          usedSaveIds: [],
+          whoGetsWhat: [
+            { userId: "demo_marco", memberName: "Marco", assignment: "Outsite Lisbon coworking Mon–Fri, surf day at Ericeira or Peniche one morning" },
+            { userId: "demo_elena", memberName: "Elena", assignment: "Intendente apartment base, market mornings, afternoon neighbourhood walks" },
+          ],
+          theSeam: "Mercado de Campo de Ourique Saturday morning — then the flight home after lunch.",
+        }),
+        comments: [
+          { userId: "demo_elena", displayName: "Elena", content: "I've been to Sintra twice. It's always crowded and always the same. I'd rather spend the time walking Alfama properly." },
+          { userId: "demo_marco", displayName: "Marco", content: "Agreed. I could do a surf morning at Ericeira mid-week without disrupting anything. That's the only detour I actually need." },
+        ],
+      },
+      {
+        question: "Which neighbourhood for shared dinners — Mouraria or Príncipe Real?",
+        status: "assigned",
+        assignedTo: "demo_elena",
+        costPerPax: null,
+        confirmationLink: null,
+        verdictJson: groupVerdictJsonSchema.parse({
+          type: "choose",
+          verdict: "Mouraria. Every night.",
+          travelPatterns: [
+            "Elena has saved Mouraria-adjacent tascas specifically — this is what she came for",
+            "Marco's coworking is in Príncipe Real but his accommodation is in Mouraria — he walks home",
+            "Both have food saves that skew local, tasco-style, cheap and good rather than destination dining",
+          ],
+          coreConflict: "Príncipe Real is more polished but it's the kind of neighbourhood you visit, not the one you eat in every night",
+          whatYoureMissing: "Príncipe Real has one or two good restaurants and a very nice garden. Mouraria has six good places within a three-minute walk of Marco's Airbnb.",
+          whyThisFits: "Tasca do Chico is a ten-minute walk from the apartment. Za'atar is on the corner. Bar da Mouraria for after. This is the neighbourhood for the week.",
+          tradeoffs: "Why not Príncipe Real: better cocktail bars, slightly more design-forward spots. But you'd be walking 20 minutes back to base after every dinner.",
+          avoidIf: ["You want a high-end wine list", "You're doing this in tourist season when Mouraria gets crowded", "Tasca do Chico is closed — check the calendar"],
+          nextMove: "Book Tasca do Chico for Tuesday and Thursday evening now. They take reservations and fill up even in February.",
+          anchors: ["Mouraria (tascas and petiscos)", "Intendente square (market and coffee)", "Alfama slope (evening walk circuit)"],
+          timingConfidence: "High — February is exactly the right time. No queues, locals dominate.",
+          stopDoingThis: "Defaulting to the 'nicer' neighbourhood when your accommodation, saves, and rhythm all point elsewhere.",
+          usedSaveIds: [],
+          whoGetsWhat: [
+            { userId: "demo_marco", memberName: "Marco", assignment: "Book Tasca do Chico Tue + Thu, organise Za'atar for the first evening" },
+            { userId: "demo_elena", memberName: "Elena", assignment: "Source the good olive oil at Intendente market, bring it to every dinner" },
+          ],
+          theSeam: "Fado at Tasca do Chico Thursday night. Arrive at 7pm or you won't get a table even with a booking.",
+        }),
+        comments: [
+          { userId: "demo_marco", displayName: "Marco", content: "I'm literally walking past Za'atar every day on the way to the coworking. This is a non-question." },
+          { userId: "demo_elena", displayName: "Elena", content: "I'll sort the reservations. You sort the wine. Tasca do Chico on a Thursday is the plan." },
+        ],
+      },
+      {
+        question: "Friday night — the new natural wine bar near Cais do Sodré or the old-school tasca in Alfama that Elena knows?",
+        status: "undecided",
+        assignedTo: null,
+        costPerPax: null,
+        confirmationLink: null,
+        verdictJson: null,
+        comments: [
+          { userId: "demo_elena", displayName: "Elena", content: "The tasca in Alfama is called Tasca do Simão. Hidden courtyard, the owner knows my name at this point. Best bacalhau in the city. But it's a trek from Mouraria." },
+          { userId: "demo_marco", displayName: "Marco", content: "How far is far? If we're walking, the natural wine bar is actually closer to the coworking and I'm finishing late on Friday." },
+          { userId: "demo_elena", displayName: "Elena", content: "20 minutes on foot. Or 10 in a taxi. The question is whether we want a proper last dinner or something more casual." },
+          { userId: "demo_marco", displayName: "Marco", content: "I vote tasca. We've been casual all week. Friday should be the good one." },
+        ],
+      },
     ],
   },
+
+  // ── Trip 3: Japan Food Circuit ────────────────────────────────────────────────
   {
-    question: "That half-day in Catania when the split ends and before we move to Syracuse — what's the plan?",
-    status: "undecided" as const,
-    assignedTo: null,
-    costPerPax: null,
-    confirmationLink: null,
-    verdictJson: null,
-    comments: [
-      { userId: "demo_james", displayName: "James", content: "Are we all arriving from different cities? I'm coming down from Taormina by rental car." },
-      { userId: "demo_nina", displayName: "Nina", content: "I'm on the Athens → Catania flight, arriving 2pm. Can someone meet me or is everyone fending for themselves?" },
-      { userId: "demo_elena", displayName: "Elena", content: "Train from Lecce, arrives 11am. I want to walk the fish market before you two land. James — could you pick Nina up if you're driving?" },
-      { userId: "demo_james", displayName: "James", content: "Yes. I'll swing by the airport on the way south. Nina just send me your flight number." },
+    inviteToken: "demo-japan-food",
+    name: "Japan Food Circuit",
+    destination: "Tokyo + Kyoto + Osaka",
+    startDate: "2026-10-10",
+    endDate: "2026-10-20",
+    coordinatorId: "demo_nina",
+    overviewNotes: `## Flights
+- Nina + Priya: London Heathrow → Tokyo Narita Oct 10 (JAL JL401, 13:00, booked ✓)
+- Return: Osaka Kansai → London Oct 20 (JAL JL404, 11:30, booked ✓)
+- JR Pass: 14-day Green Car, purchased online ✓ (activate at Narita on arrival)
+
+## Accommodation
+- Tokyo: Trunk Hotel, Shibuya — 4 nights Oct 10–14 (confirmed ✓, ¥35,000/night)
+- Kyoto: Ryokan in Gion — 3 nights Oct 14–17 (confirmed ✓, ¥28,000/night, yukata provided)
+- Osaka: boutique hotel near Namba — 3 nights Oct 17–20 (TBC — Nina on this)
+
+## Restaurant reservations — serious ones need booking 2–3 months ahead
+- Night 3 Tokyo: Florilège, Aoyama — reservation confirmed ✓ (19:30, counter seats)
+- Night 6 Kyoto: kaiseki dinner — Priya handling, URGENT (see decision room)
+- Night 9 Osaka: Hajime (2 Michelin stars) — reservation pending, called twice
+
+## Market and food research
+- Tsukiji outer market: open from 5am, best on weekdays — tuna auction requires 2-month advance lottery
+- Nishiki Market, Kyoto: go before 10am, closed Wednesdays, avoid weekends
+- Kuromon Market, Osaka: morning only, best for crab and uni in October
+- Dotonbori: evening street food, takoyaki benchmark at Wanaka
+
+## Still to do
+- Osaka hotel to confirm (Nina)
+- Kyoto kaiseki reservation — urgent (see decision room)
+- Nara / Fushimi Inari question — open (see decision room)
+- Pre-book teamLab Borderless Tokyo tickets — sells out weeks ahead`,
+    members: [
+      { userId: "demo_nina", role: "coordinator", displayName: "Nina Chen" },
+      { userId: "demo_priya", role: "member", displayName: "Priya Sharma" },
+    ],
+    decisions: [
+      {
+        question: "Tokyo → Kyoto → Osaka sequence, or flip it and start in Osaka to end in Tokyo?",
+        status: "done",
+        assignedTo: "demo_nina",
+        costPerPax: null,
+        confirmationLink: null,
+        verdictJson: groupVerdictJsonSchema.parse({
+          type: "structure",
+          verdict: "Tokyo first. End in Osaka. The reverse is wrong.",
+          travelPatterns: [
+            "Nina needs the gallery density of Tokyo to calibrate the trip before slowing down in Kyoto",
+            "Priya's kaiseki research is Kyoto-anchored — it makes sense as the centrepiece, not the opening",
+            "Osaka at the end is correct because it's the most food-casual city — right energy for a final few days",
+          ],
+          coreConflict: "Osaka-first logic breaks the narrative arc — you'd peak on street food, then spend ten days moving toward something more formal",
+          whatYoureMissing: "Osaka to Tokyo reads as anti-climactic. Tokyo has the most sensory intensity — start there when you have the energy for it.",
+          whyThisFits: "Tokyo 4 nights to calibrate and recover from the flight. Nozomi shinkansen to Kyoto — ryokan and kaiseki and Nishiki. Osaka 3 nights for street food and Dotonbori decompression before the flight home.",
+          tradeoffs: "Luggage moves three times. The Kyoto ryokan check-in time is strict — plan the Nozomi timing carefully.",
+          avoidIf: ["You have a reservation in Osaka on night 1 that you can't move", "Trunk Hotel is sold out — then swap to Osaka"],
+          nextMove: "Book the Nozomi Shinkansen Tokyo → Kyoto for Oct 14 morning. Reserve online — reserved seats only on this service.",
+          anchors: ["Shibuya / Shimokitazawa (Tokyo, Nina's neighbourhood)", "Gion / Nishiki (Kyoto, ryokan base)", "Namba / Dotonbori (Osaka, final days)"],
+          timingConfidence: "High — October is peak autumn season. Book everything now.",
+          stopDoingThis: "Second-guessing the sequence. The standard Tokyo → Kyoto → Osaka arc exists because it works.",
+          usedSaveIds: [],
+          whoGetsWhat: [
+            { userId: "demo_nina", memberName: "Nina", assignment: "Tokyo: Shimokitazawa first two evenings, teamLab Borderless day 2, Florilège night 3" },
+            { userId: "demo_priya", memberName: "Priya", assignment: "Tokyo: Tsukiji breakfast daily, Ginza exploration, research Florilège menu in advance" },
+          ],
+          theSeam: "Nozomi 700E on the morning of Oct 14. Kyoto arrival 10:30am, Nishiki Market before ryokan check-in at 3pm.",
+        }),
+        comments: [
+          { userId: "demo_priya", displayName: "Priya", content: "I was originally thinking Osaka first because the kaiseki research I've done is all Kyoto — I wanted to build toward it." },
+          { userId: "demo_nina", displayName: "Nina", content: "That's exactly right. Tokyo sets up Kyoto. Osaka is the come-down. The reverse kills the rhythm." },
+          { userId: "demo_priya", displayName: "Priya", content: "Agreed. I'll book the shinkansen. You sort the teamLab tickets — I hear they sell out." },
+        ],
+      },
+      {
+        question: "Kyoto night two: full kaiseki course or the izakaya circuit in Gion?",
+        status: "done",
+        assignedTo: "demo_priya",
+        costPerPax: "¥22,000",
+        confirmationLink: null,
+        verdictJson: groupVerdictJsonSchema.parse({
+          type: "choose",
+          verdict: "Kaiseki. Book it today.",
+          travelPatterns: [
+            "Priya plans trips around 2–3 headline restaurant reservations — kaiseki is the reason Kyoto is on the itinerary",
+            "Nina has the cultural calibration for formal dining — she won't be uncomfortable in a tatami room",
+            "The izakaya circuit is available any evening — kaiseki requires booking 2 months ahead",
+          ],
+          coreConflict: "The izakaya circuit is good but it's replicable — kaiseki in Kyoto in October at a serious kitchen is not",
+          whatYoureMissing: "If you do izakaya on night two and try to book kaiseki later, you'll find it's gone. The best rooms book out weeks ahead.",
+          whyThisFits: "October in Kyoto is peak autumn — the kaiseki menu will feature matsutake mushrooms, sudachi citrus, and whatever's at perfect ripeness that week. This is the best time to do it.",
+          tradeoffs: "Why not izakaya: more relaxed, more variety, cheaper, no dress code. Better for the last night in Osaka when the mood is casual.",
+          avoidIf: ["Someone is uncomfortable with 2.5 hour seated formal dining", "You've already done kaiseki in Tokyo", "Budget has changed since booking"],
+          nextMove: "Call Kichisen or Nakamura today — October books out by August. If full, try Mizai or Kikunoi Honten.",
+          anchors: ["Gion (ryokan and kaiseki district)", "Nishiki Market (morning, pre-kaiseki)", "Philosopher's Path (afternoon walk to reset before dinner)"],
+          timingConfidence: "High — this is the right call. The only risk is not booking in time.",
+          stopDoingThis: "Treating izakaya as a comparable alternative to kaiseki. They are different experiences serving different purposes.",
+          usedSaveIds: [],
+          whoGetsWhat: [
+            { userId: "demo_nina", memberName: "Nina", assignment: "Handle the reservation logistics, dress code research, confirm dietary requirements with the restaurant" },
+            { userId: "demo_priya", memberName: "Priya", assignment: "Research the seasonal menu, brief Nina on the kaiseki course structure before arrival" },
+          ],
+          theSeam: "Arrive at the restaurant in yukata from the ryokan if allowed — it's 10 minutes on foot. Dinner at 7pm means a full afternoon free for Nishiki.",
+        }),
+        comments: [
+          { userId: "demo_nina", displayName: "Nina", content: "I want to do the izakaya thing because it feels more real than a formal course. But I also know this is exactly when I'll regret being practical." },
+          { userId: "demo_priya", displayName: "Priya", content: "Nina. We are in Kyoto in October at a ryokan in Gion. If not now, when. I'm booking kaiseki." },
+          { userId: "demo_nina", displayName: "Nina", content: "Fine. Yes. You're right. Book it. Can we do izakaya the other night?" },
+          { userId: "demo_priya", displayName: "Priya", content: "Yes. Gion Nanba for night one. Kaiseki for night two. Perfect." },
+        ],
+      },
+      {
+        question: "We have an extra half-day between Kyoto and Osaka — Nara detour for the deer park, or stay in Kyoto for Fushimi Inari at dawn?",
+        status: "undecided",
+        assignedTo: null,
+        costPerPax: null,
+        confirmationLink: null,
+        verdictJson: null,
+        comments: [
+          { userId: "demo_nina", displayName: "Nina", content: "Fushimi Inari at dawn is one of the most photographed things in Japan, which is exactly why I'm suspicious of it. Is it actually better at 5am or is that just what everyone says?" },
+          { userId: "demo_priya", displayName: "Priya", content: "I checked — the approach path has thousands of torii gates and yes it's genuinely less crowded before 7am. The deer park at Nara is lovely but it's a 45-min train and you're spending 2 hours with deer." },
+          { userId: "demo_nina", displayName: "Nina", content: "Put it that way and Fushimi Inari wins. But I also don't want to wake up at 4:30am on day 7." },
+          { userId: "demo_priya", displayName: "Priya", content: "We ask the ryokan for an early breakfast box. 5:15am departure. Back by 8am for a proper morning. Then the Nozomi to Osaka." },
+        ],
+      },
     ],
   },
 ];
@@ -649,93 +1146,105 @@ async function main() {
     console.log("  ✓ Travel profile upserted");
   }
 
-  // ── Demo trip ──────────────────────────────────────────────────────────────
-  console.log("\n── Demo trip ──");
+  // ── Demo trips ─────────────────────────────────────────────────────────────
+  for (const tripData of DEMO_TRIPS) {
+    console.log(`\n── ${tripData.name} ──`);
 
-  // Clear existing demo trip (cascade deletes members, decisions, comments)
-  const existingTrips = await db
-    .select()
-    .from(tripsTable)
-    .where(eq(tripsTable.inviteToken, DEMO_TRIP_INVITE_TOKEN));
-  for (const trip of existingTrips) {
-    await db.delete(tripsTable).where(eq(tripsTable.id, trip.id));
-    console.log(`  Cleared existing demo trip (id ${trip.id})`);
-  }
-
-  // Create trip
-  const [trip] = await db.insert(tripsTable).values({
-    name: "Mediterranean September",
-    destination: "Southern Italy + Sicily",
-    startDate: "2025-09-01",
-    endDate: "2025-09-14",
-    coordinatorId: "demo_elena",
-    inviteToken: DEMO_TRIP_INVITE_TOKEN,
-  }).returning();
-  console.log(`  Created trip id ${trip.id}`);
-
-  // Add members
-  await db.insert(tripMembersTable).values([
-    { tripId: trip.id, userId: "demo_elena", role: "coordinator", displayName: "Elena Vasquez" },
-    { tripId: trip.id, userId: "demo_james", role: "member", displayName: "James Okoro" },
-    { tripId: trip.id, userId: "demo_nina", role: "member", displayName: "Nina Chen" },
-  ]);
-  console.log("  Added 3 members");
-
-  // Create group decisions
-  for (const dec of DEMO_GROUP_DECISIONS) {
-    const [inserted] = await db.insert(groupDecisionsTable).values({
-      tripId: trip.id,
-      question: dec.question,
-      status: dec.status,
-      verdictJson: dec.verdictJson
-        ? groupVerdictJsonSchema.parse(dec.verdictJson)
-        : null,
-      assignedTo: dec.assignedTo,
-      costPerPax: dec.costPerPax,
-      confirmationLink: dec.confirmationLink,
-      createdBy: "demo_elena",
-    }).returning();
-
-    // Add comments
-    for (const comment of dec.comments) {
-      await db.insert(decisionCommentsTable).values({
-        decisionId: inserted.id,
-        userId: comment.userId,
-        displayName: comment.displayName,
-        content: comment.content,
-      });
+    // Clear existing
+    const existingTrips = await db
+      .select()
+      .from(tripsTable)
+      .where(eq(tripsTable.inviteToken, tripData.inviteToken));
+    for (const trip of existingTrips) {
+      await db.delete(tripsTable).where(eq(tripsTable.id, trip.id));
+      console.log(`  Cleared existing trip (id ${trip.id})`);
     }
-    console.log(`  ✓ Decision "${dec.question.slice(0, 50)}…" (${dec.status})`);
+
+    // Create trip
+    const [trip] = await db.insert(tripsTable).values({
+      name: tripData.name,
+      destination: tripData.destination,
+      startDate: tripData.startDate,
+      endDate: tripData.endDate,
+      coordinatorId: tripData.coordinatorId,
+      inviteToken: tripData.inviteToken,
+    }).returning();
+    console.log(`  Created trip id ${trip.id}`);
+
+    // Add overview notes
+    await db.insert(tripOverviewNotesTable).values({
+      tripId: trip.id,
+      content: tripData.overviewNotes,
+    }).onConflictDoUpdate({
+      target: tripOverviewNotesTable.tripId,
+      set: { content: tripData.overviewNotes, updatedAt: new Date() },
+    });
+    console.log(`  ✓ Overview notes added`);
+
+    // Add members
+    await db.insert(tripMembersTable).values(
+      tripData.members.map(m => ({
+        tripId: trip.id,
+        userId: m.userId,
+        role: m.role,
+        displayName: m.displayName,
+      }))
+    );
+    console.log(`  Added ${tripData.members.length} members`);
+
+    // Create group decisions
+    for (const dec of tripData.decisions) {
+      const [inserted] = await db.insert(groupDecisionsTable).values({
+        tripId: trip.id,
+        question: dec.question,
+        status: dec.status,
+        verdictJson: dec.verdictJson ?? null,
+        assignedTo: dec.assignedTo,
+        costPerPax: dec.costPerPax,
+        confirmationLink: dec.confirmationLink,
+        createdBy: tripData.coordinatorId,
+      }).returning();
+
+      for (const comment of dec.comments) {
+        await db.insert(decisionCommentsTable).values({
+          decisionId: inserted.id,
+          userId: comment.userId,
+          displayName: comment.displayName,
+          content: comment.content,
+        });
+      }
+      console.log(`  ✓ Decision "${dec.question.slice(0, 50)}…" (${dec.status})`);
+    }
   }
 
-  // ── Friend sharing: Elena ↔ Nina ─────────────────────────────────────────
+  // ── Friend sharing ─────────────────────────────────────────────────────────
   console.log("\n── Friend sharing ──");
 
-  // Clear existing demo friend shares
-  await db
-    .delete(saveShareRequestsTable)
-    .where(eq(saveShareRequestsTable.fromUserId, "demo_elena"));
-  await db
-    .delete(saveShareRequestsTable)
-    .where(eq(saveShareRequestsTable.fromUserId, "demo_nina"));
+  // Clear all demo friend shares
+  for (const userId of DEMO_USER_IDS) {
+    await db.delete(saveShareRequestsTable).where(eq(saveShareRequestsTable.fromUserId, userId));
+  }
 
-  // Elena → Nina (accepted)
-  await db.insert(saveShareRequestsTable).values({
-    fromUserId: "demo_elena",
-    toEmail: "nina@demo.whereto.app",
-    toUserId: "demo_nina",
-    status: "accepted",
-  });
+  const friendPairs: { from: string; fromEmail: string; to: string; toEmail: string }[] = [
+    { from: "demo_elena", fromEmail: "elena@demo.whereto.app", to: "demo_nina", toEmail: "nina@demo.whereto.app" },
+    { from: "demo_nina", fromEmail: "nina@demo.whereto.app", to: "demo_elena", toEmail: "elena@demo.whereto.app" },
+    { from: "demo_marco", fromEmail: "marco@demo.whereto.app", to: "demo_elena", toEmail: "elena@demo.whereto.app" },
+    { from: "demo_elena", fromEmail: "elena@demo.whereto.app", to: "demo_marco", toEmail: "marco@demo.whereto.app" },
+    { from: "demo_nina", fromEmail: "nina@demo.whereto.app", to: "demo_priya", toEmail: "priya@demo.whereto.app" },
+    { from: "demo_priya", fromEmail: "priya@demo.whereto.app", to: "demo_nina", toEmail: "nina@demo.whereto.app" },
+  ];
 
-  // Nina → Elena (accepted, bilateral)
-  await db.insert(saveShareRequestsTable).values({
-    fromUserId: "demo_nina",
-    toEmail: "elena@demo.whereto.app",
-    toUserId: "demo_elena",
-    status: "accepted",
-  });
-
+  for (const pair of friendPairs) {
+    await db.insert(saveShareRequestsTable).values({
+      fromUserId: pair.from,
+      toEmail: pair.toEmail,
+      toUserId: pair.to,
+      status: "accepted",
+    });
+  }
   console.log("  ✓ Elena ↔ Nina friend share (accepted)");
+  console.log("  ✓ Marco ↔ Elena friend share (accepted)");
+  console.log("  ✓ Nina ↔ Priya friend share (accepted)");
 
   console.log("\nDone! Demo data seeded successfully.");
   process.exit(0);

@@ -226,7 +226,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/trips">
             <ProtectedRoute component={Trips} />
           </Route>
-          <Route path="/demo/trip" component={DemoTrip} />
+          <Route path="/demo/trip/:id" component={DemoTrip} />
           <Route path="/demo/:profileId" component={DemoProfile} />
           <Route path="/demo" component={Demo} />
           <Route>
