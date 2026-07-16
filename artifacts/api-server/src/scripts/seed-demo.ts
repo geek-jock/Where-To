@@ -115,7 +115,7 @@ async function generateDecision(question: string, saves: typeof savesTable.$infe
   const userPrompt = `User travel saves:\n${savesSnapshot}\n\nUser question:\n${question}`;
 
   const callModel = async () => openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-5",
     max_completion_tokens: 4096,
     messages: [
       { role: "system", content: systemPrompt },
