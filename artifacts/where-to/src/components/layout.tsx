@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
-import { Compass, Bookmark, Sparkles, History, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Compass, Bookmark, Sparkles, History, LogOut, ChevronLeft, ChevronRight, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -20,6 +20,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { name: "Decide", href: "/", icon: Sparkles },
     { name: "Library", href: "/saves", icon: Bookmark },
     { name: "History", href: "/history", icon: History },
+    { name: "Trips", href: "/trips", icon: Map },
   ];
 
   return (

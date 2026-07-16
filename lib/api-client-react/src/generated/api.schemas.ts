@@ -101,6 +101,49 @@ export interface TagSaveBody {
   extractedText?: string | null;
 }
 
+export interface TripMember {
+  tripId: number;
+  userId: string;
+  role: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  joinedAt: string;
+}
+
+export interface Trip {
+  id: number;
+  name: string;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  coordinatorId: string;
+  inviteToken: string;
+  createdAt: string;
+}
+
+export type TripDetail = Trip & {
+  members: TripMember[];
+  currentUserRole?: string | null;
+  isGuest: boolean;
+  openDecisionCount: number;
+  lastActivityAt: string;
+};
+
+export interface CreateTripBody {
+  name: string;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface JoinTripBody {
+  inviteToken: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
 export interface ScrapeResult {
   url: string;
   title?: string | null;
@@ -108,3 +151,7 @@ export interface ScrapeResult {
   siteName?: string | null;
   extractedText?: string | null;
 }
+
+export type GetTripParams = {
+  invite?: string;
+};

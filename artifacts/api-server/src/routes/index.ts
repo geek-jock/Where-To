@@ -4,6 +4,7 @@ import savesRouter from "./saves";
 import decisionsRouter from "./decisions";
 import scrapeRouter from "./scrape";
 import demoRouter from "./demo";
+import tripsRouter from "./trips";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use("/saves", savesRouter);
 router.use("/decisions", decisionsRouter);
 router.use("/scrape", scrapeRouter);
 router.use("/demo", demoRouter);
+router.use("/trips", tripsRouter);
 
 export default router;

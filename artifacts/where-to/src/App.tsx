@@ -13,6 +13,8 @@ import History from "./pages/history";
 import DecisionView from "./pages/decision-view";
 import Demo from "./pages/demo";
 import DemoProfile from "./pages/demo-profile";
+import Trips from "./pages/trips";
+import TripDetail from "./pages/trip-detail";
 import NotFound from "./pages/not-found";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -187,6 +189,19 @@ function ClerkProviderWithRoutes() {
           </Route>
           <Route path="/history">
             <ProtectedRoute component={History} />
+          </Route>
+          <Route path="/trips/:id">
+            <Show when="signed-in">
+              <Layout>
+                <TripDetail />
+              </Layout>
+            </Show>
+            <Show when="signed-out">
+              <TripDetail />
+            </Show>
+          </Route>
+          <Route path="/trips">
+            <ProtectedRoute component={Trips} />
           </Route>
           <Route path="/demo/:profileId" component={DemoProfile} />
           <Route path="/demo" component={Demo} />

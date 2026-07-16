@@ -249,6 +249,117 @@ export const DeleteDecisionResponse = zod.object({
 });
 
 /**
+ * @summary List trips for the current user
+ */
+export const ListTripsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  destination: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
+  coordinatorId: zod.string(),
+  inviteToken: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListTripsResponse = zod.array(ListTripsResponseItem);
+
+/**
+ * @summary Create a new trip
+ */
+export const CreateTripBody = zod.object({
+  name: zod.string(),
+  destination: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
+  displayName: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
+});
+
+/**
+ * @summary Get trip detail (requires membership or valid invite token)
+ */
+export const GetTripParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetTripQueryParams = zod.object({
+  invite: zod.coerce.string().optional(),
+});
+
+export const GetTripResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    destination: zod.string().nullish(),
+    startDate: zod.string().nullish(),
+    endDate: zod.string().nullish(),
+    coordinatorId: zod.string(),
+    inviteToken: zod.string(),
+    createdAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      members: zod.array(
+        zod.object({
+          tripId: zod.number(),
+          userId: zod.string(),
+          role: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          joinedAt: zod.coerce.date(),
+        }),
+      ),
+      currentUserRole: zod.string().nullish(),
+      isGuest: zod.boolean(),
+      openDecisionCount: zod.number(),
+      lastActivityAt: zod.coerce.date(),
+    }),
+  );
+
+/**
+ * @summary Join a trip via invite token
+ */
+export const JoinTripParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const JoinTripBody = zod.object({
+  inviteToken: zod.string(),
+  displayName: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
+});
+
+export const JoinTripResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    destination: zod.string().nullish(),
+    startDate: zod.string().nullish(),
+    endDate: zod.string().nullish(),
+    coordinatorId: zod.string(),
+    inviteToken: zod.string(),
+    createdAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      members: zod.array(
+        zod.object({
+          tripId: zod.number(),
+          userId: zod.string(),
+          role: zod.string(),
+          displayName: zod.string().nullish(),
+          avatarUrl: zod.string().nullish(),
+          joinedAt: zod.coerce.date(),
+        }),
+      ),
+      currentUserRole: zod.string().nullish(),
+      isGuest: zod.boolean(),
+      openDecisionCount: zod.number(),
+      lastActivityAt: zod.coerce.date(),
+    }),
+  );
+
+/**
  * @summary Scrape metadata from a URL
  */
 export const ScrapeUrlBody = zod.object({

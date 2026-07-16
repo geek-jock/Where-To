@@ -19,13 +19,18 @@ import type {
 import type {
   CreateDecisionBody,
   CreateSaveBody,
+  CreateTripBody,
   Decision,
   DeleteResult,
+  GetTripParams,
   HealthStatus,
+  JoinTripBody,
   Save,
   ScrapeResult,
   ScrapeUrlBody,
   TagSaveBody,
+  Trip,
+  TripDetail,
   UpdateSaveBody,
 } from "./api.schemas";
 
@@ -937,6 +942,336 @@ export const useDeleteDecision = <
   TContext
 > => {
   return useMutation(getDeleteDecisionMutationOptions(options));
+};
+
+/**
+ * @summary List trips for the current user
+ */
+export const getListTripsUrl = () => {
+  return `/api/trips`;
+};
+
+export const listTrips = async (options?: RequestInit): Promise<Trip[]> => {
+  return customFetch<Trip[]>(getListTripsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTripsQueryKey = () => {
+  return [`/api/trips`] as const;
+};
+
+export const getListTripsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTrips>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listTrips>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTripsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTrips>>> = ({
+    signal,
+  }) => listTrips({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTrips>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTripsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTrips>>
+>;
+export type ListTripsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List trips for the current user
+ */
+
+export function useListTrips<
+  TData = Awaited<ReturnType<typeof listTrips>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listTrips>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTripsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new trip
+ */
+export const getCreateTripUrl = () => {
+  return `/api/trips`;
+};
+
+export const createTrip = async (
+  createTripBody: CreateTripBody,
+  options?: RequestInit,
+): Promise<Trip> => {
+  return customFetch<Trip>(getCreateTripUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createTripBody),
+  });
+};
+
+export const getCreateTripMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTrip>>,
+    TError,
+    { data: BodyType<CreateTripBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTrip>>,
+  TError,
+  { data: BodyType<CreateTripBody> },
+  TContext
+> => {
+  const mutationKey = ["createTrip"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTrip>>,
+    { data: BodyType<CreateTripBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createTrip(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTripMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTrip>>
+>;
+export type CreateTripMutationBody = BodyType<CreateTripBody>;
+export type CreateTripMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new trip
+ */
+export const useCreateTrip = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTrip>>,
+    TError,
+    { data: BodyType<CreateTripBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createTrip>>,
+  TError,
+  { data: BodyType<CreateTripBody> },
+  TContext
+> => {
+  return useMutation(getCreateTripMutationOptions(options));
+};
+
+/**
+ * @summary Get trip detail (requires membership or valid invite token)
+ */
+export const getGetTripUrl = (id: number, params?: GetTripParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/trips/${id}?${stringifiedParams}`
+    : `/api/trips/${id}`;
+};
+
+export const getTrip = async (
+  id: number,
+  params?: GetTripParams,
+  options?: RequestInit,
+): Promise<TripDetail> => {
+  return customFetch<TripDetail>(getGetTripUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTripQueryKey = (id: number, params?: GetTripParams) => {
+  return [`/api/trips/${id}`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetTripQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTrip>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetTripParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getTrip>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTripQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrip>>> = ({
+    signal,
+  }) => getTrip(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getTrip>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetTripQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTrip>>
+>;
+export type GetTripQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get trip detail (requires membership or valid invite token)
+ */
+
+export function useGetTrip<
+  TData = Awaited<ReturnType<typeof getTrip>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetTripParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getTrip>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTripQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Join a trip via invite token
+ */
+export const getJoinTripUrl = (id: number) => {
+  return `/api/trips/${id}/join`;
+};
+
+export const joinTrip = async (
+  id: number,
+  joinTripBody: JoinTripBody,
+  options?: RequestInit,
+): Promise<TripDetail> => {
+  return customFetch<TripDetail>(getJoinTripUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(joinTripBody),
+  });
+};
+
+export const getJoinTripMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinTrip>>,
+    TError,
+    { id: number; data: BodyType<JoinTripBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof joinTrip>>,
+  TError,
+  { id: number; data: BodyType<JoinTripBody> },
+  TContext
+> => {
+  const mutationKey = ["joinTrip"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof joinTrip>>,
+    { id: number; data: BodyType<JoinTripBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return joinTrip(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type JoinTripMutationResult = NonNullable<
+  Awaited<ReturnType<typeof joinTrip>>
+>;
+export type JoinTripMutationBody = BodyType<JoinTripBody>;
+export type JoinTripMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Join a trip via invite token
+ */
+export const useJoinTrip = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinTrip>>,
+    TError,
+    { id: number; data: BodyType<JoinTripBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof joinTrip>>,
+  TError,
+  { id: number; data: BodyType<JoinTripBody> },
+  TContext
+> => {
+  return useMutation(getJoinTripMutationOptions(options));
 };
 
 /**
